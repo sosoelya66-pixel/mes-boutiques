@@ -10,16 +10,9 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Thumb } from "@/components/ui/Thumb";
 import { updateSale } from "@/lib/data";
 import { euros, signe } from "@/lib/format";
+import { shortUrl } from "@/lib/links";
 import { benefice, type Sale } from "@/lib/types";
 
-const shortUrl = (u: string) => {
-  try {
-    const x = new URL(u);
-    return x.hostname.replace(/^www\./, "") + (x.pathname.length > 1 ? x.pathname.slice(0, 24) + "…" : "");
-  } catch {
-    return u;
-  }
-};
 
 export function SaleModal({ sale, onClose }: { sale: Sale; onClose: () => void }) {
   const { shopById, listingById, refresh } = useAppState();

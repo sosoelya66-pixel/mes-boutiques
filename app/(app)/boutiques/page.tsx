@@ -5,7 +5,8 @@ import { useAppState } from "@/components/AppState";
 import { ErrorBox } from "@/components/dashboard/Dashboard";
 import { Dot } from "@/components/Header";
 import { Modal, ModalTitle } from "@/components/ui/Modal";
-import { createShop, deleteShop, updateShop } from "@/lib/data";
+import { Thumb } from "@/components/ui/Thumb";
+import { createShop, deleteShop, updateShop, uploadPhoto } from "@/lib/data";
 import type { Shop } from "@/lib/types";
 
 const COLORS = ["#8b7cf6", "#f0a04d", "#4d8af0", "#4fd18b", "#ff6f59", "#e86bc3", "#40c9c9", "#e8d44d", "#a0a3ff", "#9a9cb0"];
@@ -76,6 +77,16 @@ export default function BoutiquesPage() {
                 v={<span className="text-muted">Pas encore connectée (étape 3)</span>}
               />
               <Row
+                k="Style photo"
+                v={
+                  s.style_avatar || s.style_fond || s.style_sol || s.avatar_url ? (
+                    <span className="text-profit">✓ défini</span>
+                  ) : (
+                    <span className="text-alert">à définir</span>
+                  )
+                }
+              />
+              <Row
                 k="Dernière synchro"
                 v={s.derniere_synchro ? new Date(s.derniere_synchro).toLocaleString("fr-FR") : "—"}
               />
@@ -127,7 +138,12 @@ function ShopForm({ shop, onClose }: { shop?: Shop; onClose: () => void }) {
     taille: shop?.taille ?? "",
     alias_email: shop?.alias_email ?? "",
     couleur: shop?.couleur ?? COLORS[allShops.length % COLORS.length],
+    avatar_url: shop?.avatar_url ?? "",
+    style_avatar: shop?.style_avatar ?? "",
+    style_fond: shop?.style_fond ?? "",
+    style_sol: shop?.style_sol ?? "",
   });
+  const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -139,6 +155,10 @@ function ShopForm({ shop, onClose }: { shop?: Shop; onClose: () => void }) {
       taille: v.taille.trim() || null,
       alias_email: v.alias_email.trim().toLowerCase() || null,
       couleur: v.couleur,
+      avatar_url: v.avatar_url || null,
+      style_avatar: v.style_avatar.trim() || null,
+      style_fond: v.style_fond.trim() || null,
+      style_sol: v.style_sol.trim() || null,
     };
     try {
       if (shop) await updateShop(shop.id, payload);
@@ -194,12 +214,60 @@ function ShopForm({ shop, onClose }: { shop?: Shop; onClose: () => void }) {
             ))}
           </div>
         </div>
+        <div className="rounded-xl border border-line p-4">
+          <div className="text-sm font-semibold">Style photo</div>
+          <p className="mt-0.5 text-xs text-muted">
+            Repris automatiquement par Cowork pour les photos portées de cette boutique.
+          </p>
+          <div className="mt-3 flex items-center gap-3">
+            <Thumb src={v.avatar_url || null} size={56} />
+            <label className="btn cursor-pointer">
+              {uploading ? "Envoi…" : v.avatar_url ? "Changer la photo de l'avatar" : "Photo de référence de l'avatar"}
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  setUploading(true);
+                  try {
+                    const url = await uploadPhoto(f);
+                    setV((x) => ({ ...x, avatar_url: url }));
+                  } catch (err) {
+                    setError((err as Error).message);
+                  } finally {
+                    setUploading(false);
+                  }
+                }}
+              />
+            </label>
+          </div>
+          {(
+            [
+              ["style_avatar", "Avatar", "Femme 25 ans, cheveux châtains mi-longs, silhouette fine…"],
+              ["style_fond", "Fond / décor", "Mur blanc cassé, plante verte à gauche, lumière naturelle…"],
+              ["style_sol", "Sol", "Parquet chêne clair…"],
+            ] as const
+          ).map(([k, label, ph]) => (
+            <label key={k} className="label mt-3">
+              {label}
+              <textarea
+                className="input mt-1.5"
+                rows={2}
+                placeholder={ph}
+                value={v[k]}
+                onChange={(e) => setV({ ...v, [k]: e.target.value })}
+              />
+            </label>
+          ))}
+        </div>
         {error && <p className="text-sm text-alert">{error}</p>}
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" className="btn" onClick={onClose}>
             Annuler
           </button>
-          <button className="btn-primary" disabled={busy}>
+          <button className="btn-primary" disabled={busy || uploading}>
             {busy ? "Enregistrement…" : "Enregistrer"}
           </button>
         </div>

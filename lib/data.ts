@@ -2,6 +2,8 @@
 import { supabase } from "./supabase/client";
 import type { Listing, Sale, Shop } from "./types";
 
+export type ListingInput = Omit<Listing, "id" | "created_at">;
+
 const num = (v: unknown) => (v === null || v === undefined ? 0 : Number(v));
 
 /** Supabase renvoie 1000 lignes max par requête : on lit par pages. */
@@ -40,7 +42,10 @@ function check<T>(r: { data: T; error: { message: string } | null }) {
 }
 
 // --- Boutiques ---
-export type ShopInput = Pick<Shop, "nom" | "taille" | "alias_email" | "couleur">;
+export type ShopInput = Pick<
+  Shop,
+  "nom" | "taille" | "alias_email" | "couleur" | "avatar_url" | "style_avatar" | "style_fond" | "style_sol"
+>;
 export const createShop = async (v: ShopInput) => check(await supabase.from("shops").insert(v));
 export const updateShop = async (id: string, v: Partial<Shop>) =>
   check(await supabase.from("shops").update(v).eq("id", id));
@@ -52,6 +57,13 @@ export const createSale = async (v: SaleInput) => check(await supabase.from("sal
 export const updateSale = async (id: string, v: Partial<Sale>) =>
   check(await supabase.from("sales").update(v).eq("id", id));
 export const deleteSale = async (id: string) => check(await supabase.from("sales").delete().eq("id", id));
+
+// --- Fiches ---
+export const createListing = async (v: ListingInput) =>
+  check(await supabase.from("listings").insert(v).select("id").single()) as { id: string };
+export const updateListing = async (id: string, v: Partial<Listing>) =>
+  check(await supabase.from("listings").update(v).eq("id", id));
+export const deleteListing = async (id: string) => check(await supabase.from("listings").delete().eq("id", id));
 
 // --- Fichiers ---
 async function uid() {

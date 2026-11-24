@@ -14,15 +14,29 @@ const toLocalInput = (iso: string) => {
   return d.toISOString().slice(0, 16);
 };
 
-export function SaleForm({ sale, onClose }: { sale?: Sale; onClose: () => void }) {
+export function SaleForm({
+  sale,
+  prefill,
+  onSaved,
+  onClose,
+}: {
+  sale?: Sale;
+  /** Valeurs de départ pour une nouvelle vente (ex. depuis une fiche) */
+  prefill?: Partial<Sale>;
+  /** Appelé après l'enregistrement, avant la fermeture */
+  onSaved?: () => Promise<void> | void;
+  onClose: () => void;
+}) {
   const { shops, shopId, listings, refresh, allShops } = useAppState();
+  sale = sale ?? (prefill as Sale | undefined);
+  const isNew = !sale?.id;
   const defaultShop = sale?.shop_id ?? (shopId !== "all" ? shopId : shops[0]?.id ?? "");
   const [v, setV] = useState({
     shop_id: defaultShop,
     listing_id: sale?.listing_id ?? "",
     titre: sale?.titre ?? "",
     photo_url: sale?.photo_url ?? "",
-    prix: String(sale?.prix ?? ""),
+    prix: sale?.prix != null ? String(sale.prix) : "",
     prix_achat: String(sale?.prix_achat ?? ""),
     frais: String(sale?.frais ?? "0"),
     acheteur: sale?.acheteur ?? "",
@@ -66,8 +80,9 @@ export function SaleForm({ sale, onClose }: { sale?: Sale; onClose: () => void }
       notes: v.notes.trim() || null,
     };
     try {
-      if (sale) await updateSale(sale.id, payload);
+      if (!isNew) await updateSale(sale!.id, payload);
       else await createSale(payload);
+      await onSaved?.();
       await refresh();
       onClose();
     } catch (err) {
@@ -92,7 +107,7 @@ export function SaleForm({ sale, onClose }: { sale?: Sale; onClose: () => void }
   }
 
   async function remove() {
-    if (!sale || !confirm("Supprimer cette vente ?")) return;
+    if (!sale || isNew || !confirm("Supprimer cette vente ?")) return;
     setBusy("delete");
     try {
       await deleteSale(sale.id);
@@ -106,7 +121,7 @@ export function SaleForm({ sale, onClose }: { sale?: Sale; onClose: () => void }
 
   return (
     <Modal onClose={onClose} wide>
-      <ModalTitle onClose={onClose}>{sale ? "Modifier la vente" : "Ajouter une vente"}</ModalTitle>
+      <ModalTitle onClose={onClose}>{isNew ? "Ajouter une vente" : "Modifier la vente"}</ModalTitle>
       <form onSubmit={save} className="grid gap-4 sm:grid-cols-2">
         <label className="label">
           Boutique
@@ -200,7 +215,7 @@ export function SaleForm({ sale, onClose }: { sale?: Sale; onClose: () => void }
         {error && <p className="text-sm text-alert sm:col-span-2">{error}</p>}
 
         <div className="flex flex-wrap items-center justify-between gap-3 sm:col-span-2">
-          {sale ? (
+          {!isNew ? (
             <button type="button" className="btn-danger" onClick={remove} disabled={!!busy}>
               Supprimer
             </button>

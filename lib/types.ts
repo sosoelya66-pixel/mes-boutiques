@@ -8,6 +8,11 @@ export type Shop = {
   couleur: string; // couleur de la pastille
   actif: boolean;
   derniere_synchro: string | null;
+  // Style photo (avatar, fond, sol) repris par Cowork pour les photos portées
+  avatar_url: string | null;
+  style_avatar: string | null;
+  style_fond: string | null;
+  style_sol: string | null;
   created_at: string;
 };
 
@@ -58,6 +63,12 @@ export const STATUTS: { value: SaleStatus; label: string }[] = [
   { value: "a_envoyer", label: "À envoyer" },
   { value: "envoye", label: "Envoyé" },
   { value: "termine", label: "Terminé" },
+];
+
+export const LISTING_STATUTS: { value: ListingStatus; label: string }[] = [
+  { value: "brouillon", label: "Brouillon" },
+  { value: "en_ligne", label: "En ligne" },
+  { value: "vendu", label: "Vendu" },
 ];
 
 export const benefice = (s: Pick<Sale, "prix" | "prix_achat" | "frais">) =>

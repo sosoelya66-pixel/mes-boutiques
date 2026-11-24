@@ -59,6 +59,12 @@ create table if not exists public.sales (
   created_at timestamptz not null default now()
 );
 
+-- Style photo de chaque boutique (utilisé par Cowork / ChatGPT pour les photos portées)
+alter table public.shops add column if not exists avatar_url text;          -- photo de référence de l'avatar
+alter table public.shops add column if not exists style_avatar text;       -- description de l'avatar
+alter table public.shops add column if not exists style_fond text;         -- décor / fond
+alter table public.shops add column if not exists style_sol text;          -- sol
+
 create index if not exists sales_date_idx on public.sales (date_vente desc);
 create index if not exists sales_shop_idx on public.sales (shop_id);
 create index if not exists listings_shop_idx on public.listings (shop_id);
