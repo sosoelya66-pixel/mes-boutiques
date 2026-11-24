@@ -5,6 +5,7 @@ import { useAppState } from "@/components/AppState";
 import { ErrorBox } from "@/components/dashboard/Dashboard";
 import { Dot } from "@/components/Header";
 import { Modal, ModalTitle } from "@/components/ui/Modal";
+import { SyncPanel } from "@/components/SyncPanel";
 import { Thumb } from "@/components/ui/Thumb";
 import { createShop, deleteShop, updateShop, uploadPhoto } from "@/lib/data";
 import type { Shop } from "@/lib/types";
@@ -73,10 +74,6 @@ export default function BoutiquesPage() {
               <Row k="Alias e-mail" v={s.alias_email || "—"} />
               <Row k="Ventes" v={String(salesCount(s.id))} />
               <Row
-                k="Synchro Gmail"
-                v={<span className="text-muted">Pas encore connectée (étape 3)</span>}
-              />
-              <Row
                 k="Style photo"
                 v={
                   s.style_avatar || s.style_fond || s.style_sol || s.avatar_url ? (
@@ -94,6 +91,8 @@ export default function BoutiquesPage() {
           </section>
         ))}
       </div>
+
+      <SyncPanel />
 
       {archived.length > 0 && (
         <div className="rounded-2xl border border-line p-5 text-sm">

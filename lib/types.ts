@@ -34,7 +34,30 @@ export type Sale = {
   bordereau_url: string | null;
   suivi: string | null;
   notes: string | null;
+  /** D'où vient le prix : manuel | email (sûr) | fiche (provisoire) | aucun (à compléter) */
+  prix_source: "manuel" | "email" | "fiche" | "aucun";
+  ref_vinted: string | null;
   created_at: string;
+};
+
+export type EmailLog = {
+  id: string;
+  message_id: string;
+  recu_le: string | null;
+  expediteur: string | null;
+  sujet: string | null;
+  type: string | null;
+  statut: "traite" | "ignore" | "a_verifier" | "erreur";
+  detail: string | null;
+  shop_id: string | null;
+  sale_id: string | null;
+  created_at: string;
+};
+
+export type SyncState = {
+  derniere_synchro: string | null;
+  derniere_erreur: string | null;
+  en_cours_depuis: string | null;
 };
 
 export type ListingStatus = "brouillon" | "en_ligne" | "vendu";

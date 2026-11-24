@@ -9,6 +9,7 @@ import { Dot } from "@/components/Header";
 import { SaleForm } from "@/components/SaleForm";
 import { SaleModal } from "@/components/SaleModal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { PriceBadge } from "@/components/ui/PriceBadge";
 import { Thumb } from "@/components/ui/Thumb";
 import { updateSale } from "@/lib/data";
 import { euros, jourMois, signe } from "@/lib/format";
@@ -23,6 +24,7 @@ export function SalesPage() {
   const params = useSearchParams();
   const [statut, setStatut] = useState<SaleStatus | "">((params.get("statut") as SaleStatus) || "");
   const [mois, setMois] = useState("");
+  const [sansPrix, setSansPrix] = useState(params.get("prix") === "a_completer");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<Sale | null>(null);
   const [form, setForm] = useState<Sale | "new" | null>(null);
@@ -38,10 +40,11 @@ export function SalesPage() {
     return sales.filter(
       (s) =>
         (!statut || s.statut === statut) &&
+        (!sansPrix || s.prix_source === "aucun") &&
         (!mois || monthKey(new Date(s.date_vente).toISOString()) === mois) &&
         (!needle || s.titre.toLowerCase().includes(needle) || (s.acheteur ?? "").toLowerCase().includes(needle))
     );
-  }, [sales, statut, mois, q]);
+  }, [sales, statut, mois, q, sansPrix]);
 
   const toShip = sales.filter((s) => s.statut === "a_envoyer" && s.bordereau_url);
   const totalCa = list.reduce((a, s) => a + s.prix, 0);
@@ -121,6 +124,14 @@ export function SalesPage() {
             {x.label}
           </button>
         ))}
+        <button
+          onClick={() => setSansPrix(!sansPrix)}
+          className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium ${
+            sansPrix ? "border-alert bg-alert text-night" : "border-line bg-card text-muted hover:text-white"
+          }`}
+        >
+          Prix à compléter
+        </button>
       </div>
 
       <div className="flex justify-between text-sm text-muted">
@@ -163,7 +174,10 @@ export function SalesPage() {
                     </span>
                   </span>
                   <span className="flex shrink-0 flex-col items-end text-sm">
-                    <span>{euros(s.prix)}</span>
+                    <span className="flex items-center gap-1.5">
+                      <PriceBadge sale={s} />
+                      {euros(s.prix)}
+                    </span>
                     <span className={`font-semibold ${benefice(s) >= 0 ? "text-profit" : "text-down"}`}>
                       {signe(benefice(s))}
                     </span>

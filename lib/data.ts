@@ -1,6 +1,6 @@
 // Lecture / écriture dans Supabase.
 import { supabase } from "./supabase/client";
-import type { Listing, Sale, Shop } from "./types";
+import type { EmailLog, Listing, Sale, Shop, SyncState } from "./types";
 
 export type ListingInput = Omit<Listing, "id" | "created_at">;
 
@@ -52,7 +52,8 @@ export const updateShop = async (id: string, v: Partial<Shop>) =>
 export const deleteShop = async (id: string) => check(await supabase.from("shops").delete().eq("id", id));
 
 // --- Ventes ---
-export type SaleInput = Omit<Sale, "id" | "created_at" | "gmail_message_id">;
+export type SaleInput = Omit<Sale, "id" | "created_at" | "gmail_message_id" | "prix_source" | "ref_vinted"> &
+  Partial<Pick<Sale, "prix_source">>;
 export const createSale = async (v: SaleInput) => check(await supabase.from("sales").insert(v));
 export const updateSale = async (id: string, v: Partial<Sale>) =>
   check(await supabase.from("sales").update(v).eq("id", id));
@@ -95,3 +96,23 @@ export async function bordereauLink(value: string) {
   if (error) throw new Error(error.message);
   return data.signedUrl;
 }
+
+// --- Synchro des e-mails ---
+export async function runSyncNow(): Promise<{ message: string }> {
+  const res = await fetch("/api/sync", { method: "POST" });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error ?? `Erreur ${res.status}`);
+  return json;
+}
+
+export async function loadSyncInfo() {
+  const [log, state] = await Promise.all([
+    supabase.from("email_log").select("*").order("recu_le", { ascending: false }).limit(40),
+    supabase.from("sync_state").select("derniere_synchro, derniere_erreur, en_cours_depuis").maybeSingle(),
+  ]);
+  if (log.error) throw new Error(log.error.message);
+  return { log: (log.data ?? []) as EmailLog[], state: (state.data ?? null) as SyncState | null };
+}
+
+export const markLogHandled = async (id: string) =>
+  check(await supabase.from("email_log").update({ statut: "traite", detail: "Traité à la main" }).eq("id", id));

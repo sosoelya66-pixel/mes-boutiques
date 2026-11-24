@@ -33,6 +33,7 @@ export function Dashboard() {
       rank: ranking(allSales, shopId === "all" ? shops : shops.filter((s) => s.id === shopId), p.current),
       latest: sales.filter((s) => inRange(s.date_vente, p.current)),
       toShip: sales.filter((s) => s.statut === "a_envoyer").length,
+      noPrice: sales.filter((s) => s.prix_source === "aucun").length,
     };
   }, [now, periodKey, sales, listings, allSales, shops, shopId]);
 
@@ -122,6 +123,18 @@ export function Dashboard() {
             </span>
             <span className="text-alert/80">Voir →</span>
           </Link>
+
+          {view.noPrice > 0 && (
+            <Link
+              href="/ventes?prix=a_completer"
+              className="flex items-center justify-between rounded-2xl border border-alert/30 px-5 py-3 text-sm hover:bg-alert/[0.06]"
+            >
+              <span className="text-alert">
+                {view.noPrice} vente{view.noPrice > 1 ? "s" : ""} sans prix : à compléter
+              </span>
+              <span className="text-alert/80">Compléter →</span>
+            </Link>
+          )}
 
           {/* 5 & 6. Courbes */}
           <DailyChart

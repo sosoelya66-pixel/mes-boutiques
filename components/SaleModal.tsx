@@ -7,6 +7,7 @@ import { Dot } from "@/components/Header";
 import { SaleForm } from "@/components/SaleForm";
 import { Modal } from "@/components/ui/Modal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { PriceBadge } from "@/components/ui/PriceBadge";
 import { Thumb } from "@/components/ui/Thumb";
 import { updateSale } from "@/lib/data";
 import { euros, signe } from "@/lib/format";
@@ -53,7 +54,13 @@ export function SaleModal({ sale, onClose }: { sale: Sale; onClose: () => void }
           </span>
         )}
         {row("Date", new Date(sale.date_vente).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" }))}
-        {row("Prix", euros(sale.prix))}
+        {row(
+          "Prix",
+          <span className="inline-flex items-center gap-2">
+            <PriceBadge sale={sale} />
+            {euros(sale.prix)}
+          </span>
+        )}
         {row("Prix d'achat", euros(sale.prix_achat))}
         {row("Frais", euros(sale.frais))}
         {row("Bénéfice", <span className={`font-semibold ${b >= 0 ? "text-profit" : "text-down"}`}>{signe(b)}</span>)}

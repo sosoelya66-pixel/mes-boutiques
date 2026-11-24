@@ -70,6 +70,10 @@ export function SaleForm({
       titre: v.titre.trim(),
       photo_url: v.photo_url || null,
       prix: toNum(v.prix),
+      // Prix tapé ou modifié à la main : il devient sûr
+      ...(toNum(v.prix) > 0 && (isNew || toNum(v.prix) !== sale?.prix || sale?.prix_source !== "email")
+        ? { prix_source: "manuel" as const }
+        : {}),
       prix_achat: toNum(v.prix_achat),
       frais: toNum(v.frais),
       acheteur: v.acheteur.trim().replace(/^@/, "") || null,

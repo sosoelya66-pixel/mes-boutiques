@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { runSyncNow } from "@/lib/data";
 import { useAppState } from "./AppState";
 
 const TABS = [
@@ -20,6 +21,7 @@ export function Header() {
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold tracking-tight sm:text-[28px]">Mes boutiques</h1>
         <div className="flex items-center gap-2">
+          <SyncButton />
           <ShopSelector />
           <UserMenu />
         </div>
@@ -41,6 +43,51 @@ export function Header() {
         })}
       </nav>
     </header>
+  );
+}
+
+function SyncButton() {
+  const { refresh } = useAppState();
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ text: string; error: boolean } | null>(null);
+
+  async function run() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await runSyncNow();
+      setMsg({ text: r.message, error: r.message.startsWith("Erreur") });
+      await refresh();
+    } catch (e) {
+      setMsg({ text: (e as Error).message, error: true });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="relative">
+      <button
+        onClick={run}
+        disabled={busy}
+        title="Synchroniser les e-mails Vinted"
+        className="flex h-9 items-center gap-2 rounded-xl border border-line bg-card px-3 text-sm text-muted hover:border-white/20 hover:text-white disabled:opacity-60"
+      >
+        <span className={busy ? "inline-block animate-spin" : ""}>⟳</span>
+        <span className="hidden sm:inline">{busy ? "Synchro…" : "Synchroniser"}</span>
+      </button>
+      {msg && (
+        <div
+          onClick={() => setMsg(null)}
+          className={`absolute right-0 z-40 mt-2 w-72 cursor-pointer rounded-xl border bg-card p-3 text-sm shadow-lg shadow-black/30 ${
+            msg.error ? "border-alert/40 text-alert" : "border-line text-white"
+          }`}
+        >
+          {msg.text}
+          <div className="mt-1 text-xs text-muted">Détails dans Boutiques → Synchro e-mails</div>
+        </div>
+      )}
+    </div>
   );
 }
 
