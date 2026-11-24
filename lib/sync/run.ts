@@ -121,7 +121,9 @@ export async function runSync(): Promise<SyncSummary> {
         const from = addrText(mail.from);
         // E-mail déjà traité (ex. relance de la synchro) : on passe
         const { data: seen } = await db.from("email_log").select("id").eq("message_id", messageId).maybeSingle();
-        if (seen || !/vinted/i.test(from)) {
+        // Uniquement les vrais e-mails de Vinted (adresse @vinted.fr, @vinted.com, @mail.vinted.fr…)
+        const fromAddr = (Array.isArray(mail.from) ? mail.from[0] : mail.from)?.value?.[0]?.address ?? "";
+        if (seen || !/@([a-z0-9-]+\.)*vinted\.[a-z.]+$/i.test(fromAddr)) {
           lastUid = uid;
           continue;
         }

@@ -29,7 +29,8 @@ export type EmailData = z.infer<typeof EmailData>;
 
 const SYSTEM = `Tu lis des e-mails envoyés par Vinted à un vendeur et tu en extrais les informations demandées.
 N'invente rien : si une information n'est pas dans l'e-mail, mets null.
-Les montants sont des nombres en euros (ex. « 12,50 € » → 12.5).`;
+Les montants sont des nombres en euros (ex. « 12,50 € » → 12.5).
+Ne recopie jamais de code de vérification, de mot de passe ou de lien de connexion, ni dans le résumé ni ailleurs.`;
 
 let client: Anthropic | null = null;
 
