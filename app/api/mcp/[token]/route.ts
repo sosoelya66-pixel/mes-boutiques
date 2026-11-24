@@ -34,4 +34,15 @@ async function handle(req: Request, ctx: { params: Promise<{ token: string }> })
   }
 }
 
-export { handle as GET, handle as POST, handle as DELETE };
+/** Sans session, pas de flux GET : on répond 405, comme le prévoit le protocole MCP.
+ *  Pratique aussi pour vérifier dans un navigateur que le connecteur est bien en place. */
+async function notAllowed(_req: Request, ctx: { params: Promise<{ token: string }> }) {
+  const { token } = await ctx.params;
+  if (!authorized(token)) return new Response("Not found", { status: 404 });
+  return Response.json(
+    { jsonrpc: "2.0", error: { code: -32000, message: "Connecteur Mes boutiques actif (utiliser POST)." }, id: null },
+    { status: 405, headers: { Allow: "POST" } }
+  );
+}
+
+export { handle as POST, notAllowed as GET, notAllowed as DELETE };

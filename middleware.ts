@@ -43,5 +43,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/).*)"],
+  // Exclus : fichiers techniques, API (connecteur, synchro) et .well-known (découverte OAuth : il n'y en a pas)
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/|\\.well-known/).*)"],
 };
