@@ -14,7 +14,7 @@ async function fetchAll<T>(table: string, order: string): Promise<T[]> {
       .select("*")
       .order(order, { ascending: false })
       .range(from, from + size - 1);
-    if (error) throw error;
+    if (error) throw new Error(`${error.message}${error.code ? ` (code ${error.code})` : ""}`);
     out.push(...(data as T[]));
     if (!data || data.length < size) break;
   }

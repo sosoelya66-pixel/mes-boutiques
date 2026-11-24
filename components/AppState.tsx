@@ -38,7 +38,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       setData(await loadAll());
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(e instanceof Error ? e.message : JSON.stringify(e));
     } finally {
       setReady(true);
     }

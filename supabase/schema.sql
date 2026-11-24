@@ -63,6 +63,11 @@ create index if not exists sales_date_idx on public.sales (date_vente desc);
 create index if not exists sales_shop_idx on public.sales (shop_id);
 create index if not exists listings_shop_idx on public.listings (shop_id);
 
+-- Autorise l'appli (utilisateur connecté) à utiliser ces tables.
+-- Les règles « proprio » ci-dessous limitent ensuite chaque ligne à son propriétaire.
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on public.shops, public.listings, public.sales to authenticated;
+
 -- Sécurité : chaque ligne n'est visible que par son propriétaire
 alter table public.shops enable row level security;
 alter table public.listings enable row level security;
