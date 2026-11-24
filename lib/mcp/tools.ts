@@ -2,7 +2,13 @@
 import "server-only";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { getPeriod, type PeriodKey } from "@/lib/period";
 import { admin, getOwnerId } from "@/lib/supabase/admin";
+import { evolution, totals } from "@/lib/stats";
+import { benefice, type Listing, type Sale } from "@/lib/types";
+
+// Les périodes (« aujourd'hui », « ce mois »…) sont calculées à l'heure de Paris.
+process.env.TZ = "Europe/Paris";
 
 type Shop = {
   id: string;
@@ -74,6 +80,31 @@ async function addPhotos(owner: string, ficheId: string, urls: string[]) {
   if (r.error) throw new Error(r.error.message);
   return photos;
 }
+
+async function fetchAll<T>(table: string, owner: string, columns: string): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await admin()
+      .from(table)
+      .select(columns)
+      .eq("owner_id", owner)
+      .range(from, from + 999);
+    if (error) throw new Error(error.message);
+    out.push(...(data as T[]));
+    if (!data || data.length < 1000) break;
+  }
+  return out;
+}
+
+const r2 = (n: number) => Math.round(n * 100) / 100;
+const PERIODES: Record<string, PeriodKey> = {
+  aujourd_hui: "today",
+  hier: "yesterday",
+  "7_jours": "7d",
+  "30_jours": "30d",
+  ce_mois: "month",
+  mois_dernier: "lastMonth",
+};
 
 export function buildServer(appUrl: string) {
   const server = new McpServer({ name: "mes-boutiques", version: "1.0.0" });
@@ -246,6 +277,114 @@ export function buildServer(appUrl: string) {
             .filter((f) => !t || f.titre.toLowerCase().includes(t) || f.liens_produit.some((l: string) => l.toLowerCase().includes(t)))
             .map((f) => ({ ...f, boutique: all.find((s) => s.id === f.shop_id)?.nom, lien: ficheLink(f.id) }))
         );
+      } catch (e) {
+        return fail((e as Error).message);
+      }
+    }
+  );
+
+  server.registerTool(
+    "statistiques",
+    {
+      title: "Statistiques des ventes",
+      description:
+        "Donne les vrais chiffres des boutiques sur une période : bénéfice, chiffre d'affaires, ventes, panier moyen, " +
+        "évolution par rapport à la période d'avant (même heure), classement des boutiques, articles et catégories " +
+        "qui se vendent le mieux, délai moyen de vente des fiches, colis à envoyer, fiches créées. " +
+        "À utiliser pour faire un bilan, suivre un objectif ou conseiller des actions.",
+      inputSchema: {
+        periode: z
+          .enum(["aujourd_hui", "hier", "7_jours", "30_jours", "ce_mois", "mois_dernier"])
+          .optional()
+          .describe("Par défaut : 30_jours"),
+        boutique: z.string().optional().describe("Nom ou id d'une boutique (par défaut : toutes)"),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async (a) => {
+      try {
+        const owner = await getOwnerId();
+        const allShops = await shops(owner);
+        const shop = a.boutique ? await findShop(owner, a.boutique) : null;
+        const p = getPeriod(PERIODES[a.periode ?? "30_jours"]);
+        type S = Pick<Sale, "shop_id" | "listing_id" | "titre" | "prix" | "prix_achat" | "frais" | "date_vente" | "statut">;
+        type L = Pick<Listing, "id" | "shop_id" | "categorie" | "created_at" | "statut">;
+        let sales = await fetchAll<S>("sales", owner, "shop_id, listing_id, titre, prix, prix_achat, frais, date_vente, statut");
+        let listings = await fetchAll<L>("listings", owner, "id, shop_id, categorie, created_at, statut");
+        sales = sales.map((x) => ({ ...x, prix: Number(x.prix), prix_achat: Number(x.prix_achat), frais: Number(x.frais) }));
+        if (shop) {
+          sales = sales.filter((x) => x.shop_id === shop.id);
+          listings = listings.filter((x) => x.shop_id === shop.id);
+        }
+        const inCur = (iso: string) => {
+          const t = new Date(iso).getTime();
+          return t >= p.current.start.getTime() && t < p.current.end.getTime();
+        };
+        const cur = totals(sales as Sale[], p.current);
+        const prev = totals(sales as Sale[], p.previous);
+        const periodSales = sales.filter((x) => inCur(x.date_vente));
+        const listingById = new Map(listings.map((l) => [l.id, l]));
+
+        const group = (key: (x: S) => string | null | undefined) => {
+          const m = new Map<string, { ventes: number; ca: number; benefice: number }>();
+          for (const x of periodSales) {
+            const k = key(x) || "Non renseigné";
+            const g = m.get(k) ?? { ventes: 0, ca: 0, benefice: 0 };
+            g.ventes++;
+            g.ca += x.prix;
+            g.benefice += benefice(x);
+            m.set(k, g);
+          }
+          return [...m.entries()]
+            .map(([nom, g]) => ({ nom, ventes: g.ventes, ca: r2(g.ca), benefice: r2(g.benefice) }))
+            .sort((x, y) => y.benefice - x.benefice);
+        };
+
+        // Délai entre la création de la fiche et la vente
+        const delais = periodSales
+          .map((x) => listingById.get(x.listing_id ?? ""))
+          .map((l, i) => (l ? (new Date(periodSales[i].date_vente).getTime() - new Date(l.created_at).getTime()) / 86400000 : null))
+          .filter((d): d is number => d !== null && d >= 0);
+
+        const evo = (c: number, pr: number) => {
+          const e = evolution(c, pr);
+          return e === null ? "nouveau" : `${e >= 0 ? "+" : ""}${Math.round(e)} %`;
+        };
+
+        return ok({
+          periode: {
+            nom: a.periode ?? "30_jours",
+            du: p.current.start.toLocaleString("fr-FR"),
+            au: p.current.end.toLocaleString("fr-FR"),
+          },
+          boutique: shop?.nom ?? "Toutes",
+          totaux: {
+            benefice: r2(cur.benefice),
+            chiffre_affaires: r2(cur.ca),
+            ventes: cur.commandes,
+            panier_moyen: r2(cur.panierMoyen),
+            achats: r2(cur.achats),
+            frais: r2(cur.frais),
+          },
+          evolution_vs_periode_avant: {
+            benefice: evo(cur.benefice, prev.benefice),
+            chiffre_affaires: evo(cur.ca, prev.ca),
+            ventes: evo(cur.commandes, prev.commandes),
+          },
+          par_boutique: shop
+            ? undefined
+            : group((x) => allShops.find((s) => s.id === x.shop_id)?.nom),
+          meilleurs_articles: group((x) => x.titre).slice(0, 10),
+          par_categorie: group((x) => listingById.get(x.listing_id ?? "")?.categorie).slice(0, 10),
+          delai_moyen_de_vente_jours: delais.length ? r2(delais.reduce((s, d) => s + d, 0) / delais.length) : null,
+          colis_a_envoyer: sales.filter((x) => x.statut === "a_envoyer").length,
+          fiches: {
+            creees_sur_la_periode: listings.filter((l) => inCur(l.created_at)).length,
+            en_ligne: listings.filter((l) => l.statut === "en_ligne").length,
+            brouillons: listings.filter((l) => l.statut === "brouillon").length,
+          },
+          tableau_de_bord: appUrl,
+        });
       } catch (e) {
         return fail((e as Error).message);
       }
