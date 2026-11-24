@@ -73,6 +73,9 @@ create index if not exists listings_shop_idx on public.listings (shop_id);
 -- Les règles « proprio » ci-dessous limitent ensuite chaque ligne à son propriétaire.
 grant usage on schema public to authenticated;
 grant select, insert, update, delete on public.shops, public.listings, public.sales to authenticated;
+-- Accès serveur (connecteur Cowork, synchro Gmail) avec la clé secrète
+grant usage on schema public to service_role;
+grant select, insert, update, delete on public.shops, public.listings, public.sales to service_role;
 
 -- Sécurité : chaque ligne n'est visible que par son propriétaire
 alter table public.shops enable row level security;
