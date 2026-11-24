@@ -19,7 +19,10 @@ export function Header() {
     <header className="mb-6 sm:mb-8">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold tracking-tight sm:text-[28px]">Mes boutiques</h1>
-        <ShopSelector />
+        <div className="flex items-center gap-2">
+          <ShopSelector />
+          <UserMenu />
+        </div>
       </div>
       <nav className="no-scrollbar -mx-4 mt-5 flex gap-1 overflow-x-auto border-b border-line px-4 sm:mx-0 sm:px-0">
         {TABS.map((t) => {
@@ -41,11 +44,26 @@ export function Header() {
   );
 }
 
+function UserMenu() {
+  const { userEmail, logout } = useAppState();
+  return (
+    <button
+      onClick={logout}
+      title={userEmail ? `Connecté : ${userEmail} — se déconnecter` : "Se déconnecter"}
+      className="flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-card text-muted hover:border-white/20 hover:text-white"
+      aria-label="Se déconnecter"
+    >
+      ⏻
+    </button>
+  );
+}
+
 function ShopSelector() {
   const { shops, shopId, setShopId } = useAppState();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const current = shops.find((s) => s.id === shopId);
+  const { allShops } = useAppState();
+  const current = allShops.find((s) => s.id === shopId);
 
   useEffect(() => {
     const close = (e: MouseEvent) => {
@@ -107,7 +125,7 @@ export function Dot({ color, size = 10 }: { color?: string; size?: number }) {
       style={{
         width: size,
         height: size,
-        background: color ?? "conic-gradient(#8b7cf6 0 50%, #f0a04d 50% 100%)",
+        background: color ?? "conic-gradient(#8b7cf6 0 33%, #f0a04d 33% 66%, #4d8af0 66% 100%)",
       }}
     />
   );

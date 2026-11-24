@@ -1,0 +1,209 @@
+"use client";
+
+import { useState } from "react";
+import { useAppState } from "@/components/AppState";
+import { ErrorBox } from "@/components/dashboard/Dashboard";
+import { Dot } from "@/components/Header";
+import { Modal, ModalTitle } from "@/components/ui/Modal";
+import { createShop, deleteShop, updateShop } from "@/lib/data";
+import type { Shop } from "@/lib/types";
+
+const COLORS = ["#8b7cf6", "#f0a04d", "#4d8af0", "#4fd18b", "#ff6f59", "#e86bc3", "#40c9c9", "#e8d44d", "#a0a3ff", "#9a9cb0"];
+
+export default function BoutiquesPage() {
+  const { allShops, allSales, ready, error, refresh } = useAppState();
+  const [form, setForm] = useState<Shop | "new" | null>(null);
+  const salesCount = (id: string) => allSales.filter((s) => s.shop_id === id).length;
+
+  async function remove(shop: Shop) {
+    const n = salesCount(shop.id);
+    try {
+      if (n > 0) {
+        // On garde l'historique : la boutique est seulement retirée (masquée)
+        if (!confirm(`« ${shop.nom} » a ${n} vente(s). Elle sera retirée mais ses ventes restent dans la compta. Continuer ?`)) return;
+        await updateShop(shop.id, { actif: false });
+      } else {
+        if (!confirm(`Supprimer « ${shop.nom} » ?`)) return;
+        await deleteShop(shop.id);
+      }
+      await refresh();
+    } catch (e) {
+      alert((e as Error).message);
+    }
+  }
+
+  if (error) return <ErrorBox message={error} />;
+  const active = allShops.filter((s) => s.actif);
+  const archived = allShops.filter((s) => !s.actif);
+
+  return (
+    <div className="space-y-4">
+      <button className="btn-primary" onClick={() => setForm("new")}>
+        + Ajouter une boutique
+      </button>
+
+      {ready && active.length === 0 && (
+        <p className="rounded-2xl border border-line bg-card p-8 text-center text-sm text-muted">
+          Aucune boutique pour l&apos;instant.
+        </p>
+      )}
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {active.map((s) => (
+          <section key={s.id} className="rounded-2xl border border-line bg-card p-5 sm:p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Dot color={s.couleur} size={14} />
+                <div>
+                  <div className="font-semibold">{s.nom}</div>
+                  <div className="text-sm text-muted">Taille {s.taille || "—"}</div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button className="btn px-3 py-1.5" onClick={() => setForm(s)}>
+                  Modifier
+                </button>
+                <button className="btn-danger px-3 py-1.5" onClick={() => remove(s)}>
+                  Retirer
+                </button>
+              </div>
+            </div>
+            <dl className="mt-5 space-y-2 text-sm">
+              <Row k="Alias e-mail" v={s.alias_email || "—"} />
+              <Row k="Ventes" v={String(salesCount(s.id))} />
+              <Row
+                k="Synchro Gmail"
+                v={<span className="text-muted">Pas encore connectée (étape 3)</span>}
+              />
+              <Row
+                k="Dernière synchro"
+                v={s.derniere_synchro ? new Date(s.derniere_synchro).toLocaleString("fr-FR") : "—"}
+              />
+            </dl>
+          </section>
+        ))}
+      </div>
+
+      {archived.length > 0 && (
+        <div className="rounded-2xl border border-line p-5 text-sm">
+          <div className="mb-3 text-muted">Boutiques retirées</div>
+          {archived.map((s) => (
+            <div key={s.id} className="flex items-center justify-between py-1.5">
+              <span className="flex items-center gap-2">
+                <Dot color={s.couleur} /> {s.nom}
+              </span>
+              <button
+                className="text-muted hover:text-white"
+                onClick={async () => {
+                  await updateShop(s.id, { actif: true });
+                  await refresh();
+                }}
+              >
+                Réactiver
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {form && <ShopForm shop={form === "new" ? undefined : form} onClose={() => setForm(null)} />}
+    </div>
+  );
+}
+
+function Row({ k, v }: { k: string; v: React.ReactNode }) {
+  return (
+    <div className="flex justify-between gap-4">
+      <dt className="text-muted">{k}</dt>
+      <dd className="truncate text-right">{v}</dd>
+    </div>
+  );
+}
+
+function ShopForm({ shop, onClose }: { shop?: Shop; onClose: () => void }) {
+  const { refresh, allShops } = useAppState();
+  const [v, setV] = useState({
+    nom: shop?.nom ?? "",
+    taille: shop?.taille ?? "",
+    alias_email: shop?.alias_email ?? "",
+    couleur: shop?.couleur ?? COLORS[allShops.length % COLORS.length],
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    const payload = {
+      nom: v.nom.trim(),
+      taille: v.taille.trim() || null,
+      alias_email: v.alias_email.trim().toLowerCase() || null,
+      couleur: v.couleur,
+    };
+    try {
+      if (shop) await updateShop(shop.id, payload);
+      else await createShop(payload);
+      await refresh();
+      onClose();
+    } catch (err) {
+      setError((err as Error).message);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal onClose={onClose}>
+      <ModalTitle onClose={onClose}>{shop ? "Modifier la boutique" : "Ajouter une boutique"}</ModalTitle>
+      <form onSubmit={save} className="space-y-4">
+        <label className="label">
+          Nom du compte Vinted
+          <input className="input mt-1.5" required value={v.nom} onChange={(e) => setV({ ...v, nom: e.target.value })} />
+        </label>
+        <label className="label">
+          Taille
+          <input
+            className="input mt-1.5"
+            placeholder="S, M, 38…"
+            value={v.taille}
+            onChange={(e) => setV({ ...v, taille: e.target.value })}
+          />
+        </label>
+        <label className="label">
+          Alias e-mail
+          <input
+            type="email"
+            className="input mt-1.5"
+            placeholder="moi+boutiqueA@gmail.com"
+            value={v.alias_email}
+            onChange={(e) => setV({ ...v, alias_email: e.target.value })}
+          />
+          <span className="mt-1 block text-xs">L&apos;adresse utilisée par ce compte Vinted : elle sert à reconnaître ses e-mails.</span>
+        </label>
+        <div className="label">
+          Couleur
+          <div className="mt-2 flex flex-wrap gap-2">
+            {COLORS.map((c) => (
+              <button
+                type="button"
+                key={c}
+                onClick={() => setV({ ...v, couleur: c })}
+                className={`h-8 w-8 rounded-full border-2 ${v.couleur === c ? "border-white" : "border-transparent"}`}
+                style={{ background: c }}
+                aria-label={c}
+              />
+            ))}
+          </div>
+        </div>
+        {error && <p className="text-sm text-alert">{error}</p>}
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" className="btn" onClick={onClose}>
+            Annuler
+          </button>
+          <button className="btn-primary" disabled={busy}>
+            {busy ? "Enregistrement…" : "Enregistrer"}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}

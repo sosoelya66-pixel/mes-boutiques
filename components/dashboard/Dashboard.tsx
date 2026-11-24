@@ -13,7 +13,7 @@ import { KpiCard } from "./KpiCard";
 import { LatestSales } from "./LatestSales";
 
 export function Dashboard() {
-  const { shops, sales, listings, allSales, shopId } = useAppState();
+  const { shops, sales, listings, allSales, shopId, ready, error } = useAppState();
   const [periodKey, setPeriodKey] = useState<PeriodKey>("30d");
   // « maintenant » est fixé côté navigateur pour éviter un décalage serveur/navigateur
   const [now, setNow] = useState<Date | null>(null);
@@ -38,6 +38,18 @@ export function Dashboard() {
 
   const periodLabel = PERIODS.find((x) => x.key === periodKey)!.label.toLowerCase();
 
+  if (error) return <ErrorBox message={error} />;
+  if (ready && shops.length === 0)
+    return (
+      <div className="rounded-2xl border border-line bg-card p-8 text-center">
+        <h2 className="text-lg font-semibold">Bienvenue 👋</h2>
+        <p className="mt-2 text-sm text-muted">Commence par ajouter ta première boutique Vinted.</p>
+        <Link href="/boutiques" className="btn-primary mt-5">
+          Ajouter une boutique
+        </Link>
+      </div>
+    );
+
   return (
     <div className="space-y-4 sm:space-y-5">
       {/* 2. Filtres de période */}
@@ -57,7 +69,7 @@ export function Dashboard() {
         ))}
       </div>
 
-      {!view ? (
+      {!view || !ready ? (
         <div className="h-96" />
       ) : (
         <>
@@ -137,6 +149,18 @@ export function Dashboard() {
           <LatestSales sales={view.latest} />
         </>
       )}
+    </div>
+  );
+}
+
+export function ErrorBox({ message }: { message: string }) {
+  return (
+    <div className="rounded-2xl border border-alert/40 bg-alert/[0.07] p-6 text-sm">
+      <div className="font-semibold text-alert">Impossible de lire la base de données</div>
+      <p className="mt-1 text-muted">{message}</p>
+      <p className="mt-2 text-muted">
+        Vérifie que le script <code>supabase/schema.sql</code> a bien été exécuté dans Supabase.
+      </p>
     </div>
   );
 }

@@ -1,79 +1,104 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState } from "react";
+import { useAppState } from "@/components/AppState";
+import { BordereauButton } from "@/components/BordereauButton";
 import { Dot } from "@/components/Header";
+import { SaleForm } from "@/components/SaleForm";
+import { Modal } from "@/components/ui/Modal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Thumb } from "@/components/ui/Thumb";
-import { useAppState } from "@/components/AppState";
+import { updateSale } from "@/lib/data";
 import { euros, signe } from "@/lib/format";
 import { benefice, type Sale } from "@/lib/types";
 
+const shortUrl = (u: string) => {
+  try {
+    const x = new URL(u);
+    return x.hostname.replace(/^www\./, "") + (x.pathname.length > 1 ? x.pathname.slice(0, 24) + "…" : "");
+  } catch {
+    return u;
+  }
+};
+
 export function SaleModal({ sale, onClose }: { sale: Sale; onClose: () => void }) {
-  const { shopById } = useAppState();
+  const { shopById, listingById, refresh } = useAppState();
+  const [editing, setEditing] = useState(false);
   const shop = shopById(sale.shop_id);
+  const fiche = listingById(sale.listing_id);
   const b = benefice(sale);
 
-  useEffect(() => {
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", esc);
-    return () => window.removeEventListener("keydown", esc);
-  }, [onClose]);
+  if (editing) return <SaleForm sale={sale} onClose={onClose} />;
 
   const row = (k: string, v: React.ReactNode) => (
     <div className="flex justify-between gap-4 border-b border-line py-2.5 text-sm last:border-0">
-      <span className="text-muted">{k}</span>
-      <span className="text-right">{v}</span>
+      <span className="shrink-0 text-muted">{k}</span>
+      <span className="min-w-0 text-right">{v}</span>
     </div>
   );
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md rounded-t-2xl border border-line bg-card p-6 sm:rounded-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex gap-4">
-          <Thumb src={sale.photo_url} size={72} alt={sale.titre} />
-          <div className="min-w-0 flex-1">
-            <div className="font-semibold leading-snug">{sale.titre}</div>
-            <div className="mt-1 text-sm text-muted">@{sale.acheteur}</div>
-            <div className="mt-2">
-              <StatusBadge statut={sale.statut} />
-            </div>
+    <Modal onClose={onClose}>
+      <div className="flex gap-4">
+        <Thumb src={sale.photo_url} size={72} alt={sale.titre} />
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold leading-snug">{sale.titre}</div>
+          {sale.acheteur && <div className="mt-1 text-sm text-muted">@{sale.acheteur}</div>}
+          <div className="mt-2">
+            <StatusBadge statut={sale.statut} />
           </div>
-          <button onClick={onClose} className="self-start text-xl leading-none text-muted hover:text-white" aria-label="Fermer">
-            ×
-          </button>
         </div>
-        <div className="mt-5">
-          {row(
-            "Boutique",
-            <span className="inline-flex items-center gap-2">
-              <Dot color={shop?.couleur} /> {shop?.nom}
-            </span>
-          )}
-          {row(
-            "Date",
-            new Date(sale.date_vente).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })
-          )}
-          {row("Prix", euros(sale.prix))}
-          {row("Prix d'achat", euros(sale.prix_achat))}
-          {row("Frais", euros(sale.frais))}
-          {row("Bénéfice", <span className="font-semibold text-profit">{signe(b)}</span>)}
-          {row("Suivi", sale.suivi ?? "—")}
-        </div>
-        <div className="mt-5 grid grid-cols-2 gap-2">
-          <button disabled className="rounded-xl border border-line px-3 py-2.5 text-sm text-muted opacity-60" title="Disponible à l'étape 2">
-            Bordereau
-          </button>
-          <button disabled className="rounded-xl border border-line px-3 py-2.5 text-sm text-muted opacity-60" title="Disponible à l'étape 2">
-            Modifier
-          </button>
-        </div>
+        <button onClick={onClose} className="self-start text-2xl leading-none text-muted hover:text-white" aria-label="Fermer">
+          ×
+        </button>
       </div>
-    </div>
+      <div className="mt-5">
+        {row(
+          "Boutique",
+          <span className="inline-flex items-center gap-2">
+            <Dot color={shop?.couleur} /> {shop?.nom}
+          </span>
+        )}
+        {row("Date", new Date(sale.date_vente).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" }))}
+        {row("Prix", euros(sale.prix))}
+        {row("Prix d'achat", euros(sale.prix_achat))}
+        {row("Frais", euros(sale.frais))}
+        {row("Bénéfice", <span className={`font-semibold ${b >= 0 ? "text-profit" : "text-down"}`}>{signe(b)}</span>)}
+        {row("Suivi", sale.suivi ?? "—")}
+        {row(
+          "Lien produit",
+          fiche?.liens_produit.length ? (
+            <span className="flex flex-col items-end gap-1">
+              {fiche.liens_produit.map((u) => (
+                <a key={u} href={u} target="_blank" rel="noreferrer" className="truncate text-orders hover:underline">
+                  {shortUrl(u)} ↗
+                </a>
+              ))}
+            </span>
+          ) : (
+            <span className="text-muted">{fiche ? "aucun lien" : "fiche non reliée"}</span>
+          )
+        )}
+        {sale.notes && row("Notes", sale.notes)}
+      </div>
+      <div className="mt-5 grid grid-cols-2 gap-2">
+        <BordereauButton value={sale.bordereau_url} />
+        <button className="btn" onClick={() => setEditing(true)}>
+          Modifier
+        </button>
+        {sale.statut === "a_envoyer" && (
+          <button
+            className="btn-primary col-span-2"
+            onClick={async () => {
+              await updateSale(sale.id, { statut: "envoye" });
+              await refresh();
+              onClose();
+            }}
+          >
+            Marquer envoyé
+          </button>
+        )}
+      </div>
+    </Modal>
   );
 }

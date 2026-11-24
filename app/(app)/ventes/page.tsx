@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import { SalesPreview } from "./SalesPreview";
+import { SalesPage } from "./SalesPage";
 
 export default function Page() {
   return (
     <Suspense>
-      <SalesPreview />
+      <SalesPage />
     </Suspense>
   );
 }

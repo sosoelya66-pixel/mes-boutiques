@@ -31,3 +31,22 @@ body {
 
 /* Recharts : pas de contour bleu au clic */
 .recharts-wrapper *:focus { outline: none; }
+
+/* Champs et boutons communs */
+@layer components {
+  .input {
+    @apply w-full rounded-xl border border-line bg-night px-3.5 py-2.5 text-sm text-white outline-none placeholder:text-muted/60 focus:border-white/30;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-card px-3.5 py-2 text-sm font-medium text-white transition-colors hover:border-white/25 disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-night transition-opacity hover:opacity-90 disabled:opacity-50;
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-alert/40 px-3.5 py-2 text-sm font-medium text-alert hover:bg-alert/10;
+  }
+  .label {
+    @apply block text-sm text-muted;
+  }
+}
