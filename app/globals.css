@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+  --color-night: #12131f;
+  --color-card: #191a2b;
+  --color-line: #262838;
+  --color-muted: #9a9cb0;
+  --color-profit: #4fd18b;
+  --color-revenue: #8b7cf6;
+  --color-orders: #4d8af0;
+  --color-alert: #ff6f59;
+  --color-up: #4fd18b;
+  --color-down: #ff5b6b;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+html,
+body {
+  background: var(--color-night);
+  color: #fff;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Barre de défilement discrète pour les pastilles sur mobile */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+/* Recharts : pas de contour bleu au clic */
+.recharts-wrapper *:focus { outline: none; }
