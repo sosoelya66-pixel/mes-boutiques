@@ -7,7 +7,6 @@ import { admin, getOwnerId } from "@/lib/supabase/admin";
 import { htmlToText } from "@/lib/sync/run";
 import { humanError } from "./errors";
 import { generateFiche, readProductPage } from "./generate";
-import { imagesFromLink } from "./imagesFromLink";
 import { generateWornPhoto } from "./photos";
 
 export type JobParams = {
@@ -91,14 +90,13 @@ export async function runTextStep(id: string) {
     taille = shop?.taille ?? null;
     const page = p.lien ? await readProductPage(p.lien, htmlToText) : null;
     const f = await generateFiche({ lien: p.lien, page, photos: p.produit, taille, marque: p.marque, etat: p.etat, prix_achat: p.prix_achat, notes: p.notes });
-    // Photos du produit : celles fournies, sinon celles de la page, sinon lues par Claude sur le lien
-    let ref = p.produit.length ? p.produit : page?.images.slice(0, 1) ?? [];
-    if (!ref.length && p.lien && p.nb_photos > 0) ref = await imagesFromLink(p.lien);
+    // Photos du produit : celles fournies (captures), sinon l'image de la page si le site la laisse lire
+    const ref = p.produit.length ? p.produit : page?.images.slice(0, 1) ?? [];
     const notes = [`💡 ${f.conseil}`, p.lien && !page ? "Page produit illisible : fiche rédigée d'après les photos." : ""].filter(Boolean).join("\n");
     const photosNext = p.nb_photos > 0 && ref.length > 0;
     const erreurs =
       p.nb_photos > 0 && !ref.length
-        ? ["Photos portées non faites : Temu/Shein ne laissent pas lire leurs images. Ajoute une capture du produit (Modifier → + Photos), puis « Générer les photos portées »."]
+        ? ["Photos portées non faites : ajoute une capture d'écran du produit (Modifier → + Photos), puis « Générer les photos portées »."]
         : [];
     await save(id, {
       titre: f.titre,

@@ -148,7 +148,7 @@ export function CreateWithAI({
           </label>
 
           <div className="sm:col-span-2">
-            <div className="label">Photos du produit (conseillé : 1 à 3 photos nettes de l&apos;article seul)</div>
+            <div className="label">Captures du produit (1 à 3, l&apos;article seul) · nécessaires pour les photos portées</div>
             <div className="mt-1.5 flex flex-wrap gap-2">
               {produit.map((p, i) => (
                 <div key={p} className="relative">

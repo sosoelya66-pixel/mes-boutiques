@@ -150,7 +150,7 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
             📸 Photos portées avec l&apos;avatar de {shop.nom}
             {!listing.photos.length && (
               <span className="block text-xs">
-                {listing.liens_produit.length ? "Les photos du produit seront lues sur le lien (sinon ajoute une capture)." : "Ajoute une photo du produit (Modifier → + Photos)."}
+                Ajoute d&apos;abord une capture du produit (Modifier → + Photos).
               </span>
             )}
           </span>
@@ -161,8 +161,8 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
               </option>
             ))}
           </select>
-          <button className="btn-primary !py-1.5" onClick={genererPhotos} disabled={genBusy || (!listing.photos.length && !listing.liens_produit.length)}>
-            {genBusy ? "Lecture du lien…" : "Générer"}
+          <button className="btn-primary !py-1.5" onClick={genererPhotos} disabled={genBusy || !listing.photos.length}>
+            {genBusy ? "…" : "Générer"}
           </button>
         </div>
       )}
