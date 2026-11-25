@@ -1,5 +1,6 @@
 // Lecture / écriture dans Supabase.
 import { supabase } from "./supabase/client";
+import type { Tache, TacheInput } from "./taches";
 import type { EmailLog, Listing, Sale, Shop, SyncState } from "./types";
 
 export type ListingInput = Omit<Listing, "id" | "created_at">;
@@ -132,3 +133,27 @@ export async function loadSyncInfo() {
 
 export const markLogHandled = async (id: string) =>
   check(await supabase.from("email_log").update({ statut: "traite", detail: "Traité à la main" }).eq("id", id));
+
+// --- Tâches du jour ---
+export async function loadTaches(jour: string) {
+  const r = await supabase.from("taches").select("*").eq("jour", jour).order("ordre").order("created_at");
+  if (r.error) throw new Error(r.error.message);
+  return r.data as Tache[];
+}
+
+/** Ajoute les tâches qui n'existent pas encore pour ce jour (sans toucher aux autres). */
+export async function insertTaches(jour: string, list: TacheInput[]) {
+  if (!list.length) return;
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) throw new Error("Non connecté");
+  check(
+    await supabase
+      .from("taches")
+      .upsert(list.map((t) => ({ ...t, jour, owner_id: data.user!.id })), { onConflict: "owner_id,jour,cle", ignoreDuplicates: true })
+  );
+}
+
+export const setTacheFaite = async (id: string, fait: boolean, auto = false) =>
+  check(await supabase.from("taches").update({ fait, auto: fait && auto, fait_le: fait ? new Date().toISOString() : null }).eq("id", id));
+
+export const deleteTache = async (id: string) => check(await supabase.from("taches").delete().eq("id", id));

@@ -7,6 +7,7 @@ import { BordereauButton } from "@/components/BordereauButton";
 import { ErrorBox } from "@/components/dashboard/Dashboard";
 import { Dot } from "@/components/Header";
 import { ListingModal } from "@/components/ListingModal";
+import { TachesDuJour } from "@/components/TachesDuJour";
 import { SaleForm } from "@/components/SaleForm";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Thumb } from "@/components/ui/Thumb";
@@ -81,6 +82,9 @@ export default function TodayPage() {
         </div>
         <h2 className="mt-1 text-2xl font-bold">{greeting(now)} 👋</h2>
       </div>
+
+      {/* Tâches du jour à cocher */}
+      <TachesDuJour />
 
       {/* Chiffres du jour */}
       <div className="rise grid grid-cols-3 gap-3">
