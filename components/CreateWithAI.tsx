@@ -41,8 +41,12 @@ export function CreateWithAI({
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const shop = shops.find((s) => s.id === v.shop_id);
-  const hasStyle = !!(shop?.avatar_url || shop?.style_avatar);
+  // Plusieurs boutiques possibles : une fiche par boutique cochée
+  const [choix, setChoix] = useState<string[]>(v.shop_id ? [v.shop_id] : []);
+  const selection = shops.filter((s) => choix.includes(s.id));
+  const avecStyle = (s: (typeof shops)[number]) => !!(s.avatar_url || s.style_avatar);
+  const hasStyle = selection.some(avecStyle);
+  const toggleShop = (id: string) => setChoix((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
 
   async function addProductPhotos(files: FileList | null) {
     if (!files?.length) return;
@@ -60,23 +64,30 @@ export function CreateWithAI({
 
   async function run() {
     setError(null);
-    if (!v.shop_id) return setError("Choisis une boutique.");
+    if (!selection.length) return setError("Coche au moins une boutique.");
     if (!v.lien.trim() && !produit.length) return setError("Colle un lien produit ou ajoute au moins une photo du produit.");
     setSending(true);
     try {
       const prixAchat = parseFloat(v.prix_achat.replace(",", "."));
-      const r = await post<{ id: string }>("/api/fiches/jobs", {
-        shop_id: v.shop_id,
-        lien: v.lien.trim() || undefined,
-        produit,
-        marque: v.marque,
-        etat: v.etat,
-        prix_achat: Number.isFinite(prixAchat) ? prixAchat : null,
-        notes: v.notes,
-        nb_photos: hasStyle ? nbPhotos : 0,
-      });
+      let premier = "";
+      // Une fiche par boutique, chacune avec sa taille et sa carte d'identité
+      for (const shop of selection) {
+        const r = await post<{ id: string }>("/api/fiches/jobs", {
+          shop_id: shop.id,
+          lien: v.lien.trim() || undefined,
+          produit,
+          marque: v.marque,
+          etat: v.etat,
+          prix_achat: Number.isFinite(prixAchat) ? prixAchat : null,
+          notes: [v.notes, selection.length > 1 ? "Rédige un titre et une description différents des autres boutiques (même produit publié sur plusieurs comptes)." : ""]
+            .filter(Boolean)
+            .join(" "),
+          nb_photos: avecStyle(shop) ? nbPhotos : 0,
+        });
+        premier ||= r.id;
+      }
       await refresh();
-      onStarted(r.id);
+      onStarted(premier);
     } catch (e) {
       setError((e as Error).message);
       setSending(false);
@@ -95,16 +106,36 @@ export function CreateWithAI({
       <ModalTitle onClose={onClose}>✨ Créer une fiche avec Claude</ModalTitle>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="label">
-            Boutique {shop?.taille && <span className="text-xs">· taille {shop.taille}</span>}
-            <select className="input mt-1.5" value={v.shop_id} onChange={(e) => setV({ ...v, shop_id: e.target.value })}>
-              {shops.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.nom}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="label sm:col-span-2">
+            Boutiques <span className="text-xs">· coche une ou plusieurs (une fiche par boutique)</span>
+            <div className="mt-1.5 flex flex-wrap gap-2">
+              {shops.map((s) => {
+                const on = choix.includes(s.id);
+                return (
+                  <button
+                    type="button"
+                    key={s.id}
+                    onClick={() => toggleShop(s.id)}
+                    className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                      on ? "pill-active text-white" : "border-line bg-card text-muted hover:text-white"
+                    }`}
+                  >
+                    <span className={`flex h-4 w-4 items-center justify-center rounded border text-[10px] ${on ? "border-white bg-white text-night" : "border-white/30"}`}>
+                      {on ? "✓" : ""}
+                    </span>
+                    <span className="h-2 w-2 rounded-full" style={{ background: s.couleur }} />
+                    {s.nom}
+                    {s.taille && <span className="text-xs opacity-70">· {s.taille}</span>}
+                  </button>
+                );
+              })}
+              {shops.length > 2 && (
+                <button type="button" onClick={() => setChoix(choix.length === shops.length ? [] : shops.map((s) => s.id))} className="px-2 text-xs text-revenue hover:underline">
+                  {choix.length === shops.length ? "Tout décocher" : "Tout cocher"}
+                </button>
+              )}
+            </div>
+          </div>
           {field("prix_achat", "Prix d'achat (€, facultatif)", { inputMode: "decimal" })}
           <label className="label sm:col-span-2">
             Lien produit
@@ -165,11 +196,11 @@ export function CreateWithAI({
               <div>
                 <div className="text-sm font-medium">Photos portées</div>
                 <div className="text-xs text-muted">
-                  {!hasStyle
-                    ? "Carte d'identité de la boutique sans avatar (Boutiques → Carte d'identité) : pas de photos portées."
-                    : shop && styleComplet(shop)
-                      ? "Générées avec l'avatar, le fond et le sol de la carte d'identité."
-                      : `Carte d'identité incomplète (${shop ? stylePhotos(shop) : 0}/3 photos) : ajoute le fond et le sol pour des photos plus cohérentes.`}
+                  {!selection.length
+                    ? "Coche au moins une boutique."
+                    : !hasStyle
+                      ? "Carte d'identité sans avatar (Boutiques → Carte d'identité) : pas de photos portées."
+                      : selection.map((s) => `${s.nom} : ${!avecStyle(s) ? "pas d'avatar, sans photos" : styleComplet(s) ? "avatar, fond et sol ✓" : `${stylePhotos(s)}/3 photos`}`).join(" · ")}
                 </div>
               </div>
               <select
@@ -196,7 +227,7 @@ export function CreateWithAI({
               Annuler
             </button>
             <button className="btn-primary" onClick={run} disabled={uploading || sending}>
-              {sending ? "Envoi…" : "✨ Créer la fiche"}
+              {sending ? "Envoi…" : selection.length > 1 ? `✨ Créer ${selection.length} fiches` : "✨ Créer la fiche"}
             </button>
           </div>
         </div>
