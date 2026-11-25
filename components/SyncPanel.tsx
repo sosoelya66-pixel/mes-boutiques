@@ -32,6 +32,22 @@ export function SyncPanel() {
   const [message, setMessage] = useState<string | null>(null);
   const [onlyIssues, setOnlyIssues] = useState(false);
   const [openSale, setOpenSale] = useState<string | null>(null);
+  type Diag = { compte: string; boites: string[]; derniers: { date: string; de: string; a: string; sujet: string }[] };
+  const [diag, setDiag] = useState<Diag | null>(null);
+  async function diagnostic() {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/sync/diagnostic", { method: "POST" });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error ?? `Erreur ${res.status}`);
+      setDiag(j);
+    } catch (e) {
+      setMessage("Erreur : " + (e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -88,8 +104,35 @@ export function SyncPanel() {
           <button className="text-xs text-muted hover:text-white" onClick={() => sync(7)} disabled={busy} title="Relit les e-mails Vinted des 7 derniers jours (ceux déjà traités sont ignorés)">
             Relire les 7 derniers jours
           </button>
+          <button className="text-xs text-muted hover:text-white" onClick={diagnostic} disabled={busy}>
+            Diagnostic de la boîte
+          </button>
         </div>
       </div>
+
+      {diag && (
+        <div className="mt-4 rounded-xl border border-line p-3 text-xs">
+          <div className="flex justify-between gap-2">
+            <span>
+              Boîte lue : <b>{diag.compte}</b> (Boîte de réception)
+            </span>
+            <button className="text-muted hover:text-white" onClick={() => setDiag(null)}>
+              ×
+            </button>
+          </div>
+          <div className="mt-1 text-muted">10 derniers e-mails reçus :</div>
+          <ul className="mt-1 space-y-1.5">
+            {diag.derniers.map((m, i) => (
+              <li key={i} className="border-t border-line pt-1.5">
+                <div className="text-muted">{m.date ? new Date(m.date).toLocaleString("fr-FR") : ""}</div>
+                <div className="truncate">{m.sujet || "(sans sujet)"}</div>
+                <div className="truncate text-muted">de {m.de}</div>
+                <div className="truncate text-muted">à {m.a}</div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="mt-5 flex items-center justify-between gap-3">
         <span className="text-sm text-muted">Journal ({log.length} derniers e-mails)</span>
