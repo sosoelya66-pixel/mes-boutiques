@@ -149,7 +149,7 @@ export function ListingForm({ listing, onClose }: { listing?: Listing; onClose: 
           <div className="mt-1.5 flex flex-wrap gap-2">
             {photos.map((p, i) => (
               <div key={p} className="relative">
-                <img src={p} alt="" className="h-20 w-20 rounded-lg object-cover" />
+                <img loading="lazy" decoding="async" src={p} alt="" className="h-20 w-20 rounded-lg object-cover" />
                 <button
                   type="button"
                   onClick={() => setPhotos(photos.filter((_, j) => j !== i))}

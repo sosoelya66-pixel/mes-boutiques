@@ -3,12 +3,17 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppState } from "@/components/AppState";
-import { deleteTache, insertTaches, loadSyncInfo, loadTaches, setTacheFaite } from "@/lib/data";
+import { BordereauButton } from "@/components/BordereauButton";
+import { SaleForm } from "@/components/SaleForm";
+import { deleteTache, insertTaches, loadSyncInfo, loadTaches, setTacheFaite, updateListing, updateSale } from "@/lib/data";
+import type { Sale } from "@/lib/types";
 import { aVerifier, buildTaches, jourParis, resolue, type Tache } from "@/lib/taches";
 
 /** Liste des tâches du jour, à cocher. Recréée chaque matin à partir des données. */
 export function TachesDuJour() {
-  const { allShops, allSales, allListings, objectifGlobal, ready } = useAppState();
+  const { allShops, allSales, allListings, objectifGlobal, ready, refresh } = useAppState();
+  const [editSale, setEditSale] = useState<Sale | null>(null);
+  const [printing, setPrinting] = useState(false);
   const [taches, setTaches] = useState<Tache[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [nouvelle, setNouvelle] = useState("");
@@ -44,6 +49,89 @@ export function TachesDuJour() {
     await setTacheFaite(t.id, !t.fait);
   }
 
+  // Actions directes depuis la tâche (la tâche se coche ensuite toute seule)
+  const idOf = (t: Tache) => t.cle.split(":")[1];
+  const saleOf = (t: Tache) => allSales.find((x) => x.id === idOf(t));
+  async function act(fn: () => Promise<unknown>) {
+    await fn();
+    await refresh();
+  }
+
+  function actions(t: Tache) {
+    if (t.fait) return null;
+    const btn = "shrink-0 rounded-lg border border-line px-2 py-1 text-xs text-muted hover:text-white";
+    const ok = "btn-primary shrink-0 !px-2.5 !py-1 !text-xs";
+    switch (t.type) {
+      case "colis": {
+        const sale = saleOf(t);
+        return sale ? (
+          <>
+            <BordereauButton value={sale.bordereau_url} className={btn} />
+            <button className={ok} onClick={() => act(() => updateSale(sale.id, { statut: "envoye" }))}>
+              Envoyé ✓
+            </button>
+          </>
+        ) : null;
+      }
+      case "prix": {
+        const sale = saleOf(t);
+        return sale ? (
+          <button className={btn} onClick={() => setEditSale(sale)}>
+            Saisir le prix
+          </button>
+        ) : null;
+      }
+      case "publier":
+        return (
+          <>
+            {t.lien && (
+              <Link href={t.lien} className={btn}>
+                Ouvrir
+              </Link>
+            )}
+            <button className={ok} onClick={() => act(() => updateListing(idOf(t), { statut: "en_ligne" }))}>
+              En ligne ✓
+            </button>
+          </>
+        );
+      case "suivi": {
+        const sale = saleOf(t);
+        return sale ? (
+          <button className={ok} onClick={() => act(() => updateSale(sale.id, { statut: "termine" }))}>
+            Terminé ✓
+          </button>
+        ) : null;
+      }
+      default:
+        return t.lien ? (
+          <Link href={t.lien} className={btn}>
+            Ouvrir
+          </Link>
+        ) : null;
+    }
+  }
+
+  // Tous les bordereaux des colis encore à envoyer, en un seul PDF
+  const labels = (taches ?? [])
+    .filter((t) => t.type === "colis" && !t.fait)
+    .map((t) => saleOf(t)?.bordereau_url)
+    .filter((u): u is string => !!u);
+  async function printAll() {
+    const w = window.open("", "_blank");
+    setPrinting(true);
+    try {
+      const { mergeBordereaux } = await import("@/lib/print");
+      const r = await mergeBordereaux(labels);
+      if (w) w.location.href = r.url;
+      else window.location.href = r.url;
+    } catch (e) {
+      w?.close();
+      alert("Erreur : " + (e as Error).message);
+    } finally {
+      setPrinting(false);
+    }
+  }
+
   async function ajouter(e: React.FormEvent) {
     e.preventDefault();
     const titre = nouvelle.trim();
@@ -69,9 +157,16 @@ export function TachesDuJour() {
   return (
     <section className="rise glass glow-corner rounded-2xl p-4 sm:p-5" style={{ ["--glow" as string]: "#8b7cf6" }}>
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-[15px] font-semibold">📋 Tes tâches du jour</h3>
-        <span className={`text-sm font-semibold ${faites === taches.length && taches.length ? "text-profit" : "text-muted"}`}>
-          {faites}/{taches.length}
+        <h3 className="text-[15px] font-semibold">📋 Tâches du jour</h3>
+        <span className="flex items-center gap-2">
+          {labels.length > 0 && (
+            <button className="btn !px-2.5 !py-1 !text-xs" onClick={printAll} disabled={printing} title="Imprimer tous les bordereaux">
+              🖨 {printing ? "…" : labels.length}
+            </button>
+          )}
+          <span className={`text-sm font-semibold ${faites === taches.length && taches.length ? "text-profit" : "text-muted"}`}>
+            {faites}/{taches.length}
+          </span>
         </span>
       </div>
       <div className="mt-2 h-2 rounded-full bg-line">
@@ -84,7 +179,7 @@ export function TachesDuJour() {
 
       <ul className="mt-3 divide-y divide-line">
         {shown.map((t) => (
-          <li key={t.id} className="flex items-start gap-3 py-2.5">
+          <li key={t.id} className="flex flex-wrap items-start gap-x-3 gap-y-2 py-2.5 sm:flex-nowrap">
             <button
               onClick={() => toggle(t)}
               aria-label={t.fait ? "Décocher" : "Cocher"}
@@ -94,7 +189,7 @@ export function TachesDuJour() {
             >
               {t.fait ? "✓" : ""}
             </button>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 basis-[60%]">
               <div className={`text-sm ${t.fait ? "text-muted line-through" : "font-medium"}`}>{t.titre}</div>
               {(t.detail || t.auto) && (
                 <div className="mt-0.5 text-xs text-muted">
@@ -103,11 +198,7 @@ export function TachesDuJour() {
                 </div>
               )}
             </div>
-            {t.lien && !t.fait && (
-              <Link href={t.lien} className="shrink-0 rounded-lg border border-line px-2 py-1 text-xs text-muted hover:text-white">
-                Ouvrir
-              </Link>
-            )}
+            <div className="flex shrink-0 flex-wrap justify-end gap-1.5">{actions(t)}</div>
             {t.type === "perso" && (
               <button
                 onClick={async () => {
@@ -135,6 +226,7 @@ export function TachesDuJour() {
           {voirFaites ? "Masquer les tâches faites" : `Afficher les tâches faites (${faites})`}
         </button>
       )}
+      {editSale && <SaleForm sale={editSale} onClose={() => setEditSale(null)} />}
     </section>
   );
 }

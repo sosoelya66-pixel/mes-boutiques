@@ -105,7 +105,7 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
         <div className="no-scrollbar -mx-6 mt-4 flex gap-2 overflow-x-auto px-6">
           {listing.photos.map((p) => (
             <a key={p} href={p} target="_blank" rel="noreferrer" className="shrink-0">
-              <img src={p} alt="" className="h-36 w-28 rounded-xl object-cover" />
+              <img loading="lazy" decoding="async" src={p} alt="" className="h-36 w-28 rounded-xl object-cover" />
             </a>
           ))}
         </div>

@@ -71,13 +71,16 @@ export async function generateWornPhoto(input: {
     image: files,
     prompt,
     size: "1024x1536",
+    // JPEG compressé : ~10 fois plus léger qu'un PNG, chargement rapide sur téléphone
+    output_format: "jpeg",
+    output_compression: 85,
     quality: (process.env.OPENAI_IMAGE_QUALITY as "low" | "medium" | "high" | undefined) || "medium",
   });
   const b64 = result.data?.[0]?.b64_json;
   if (!b64) throw new Error("Aucune image renvoyée par le générateur.");
 
-  const path = `${owner}/${crypto.randomUUID()}.png`;
-  const up = await admin().storage.from("photos").upload(path, Buffer.from(b64, "base64"), { contentType: "image/png" });
+  const path = `${owner}/${crypto.randomUUID()}.jpg`;
+  const up = await admin().storage.from("photos").upload(path, Buffer.from(b64, "base64"), { contentType: "image/jpeg" });
   if (up.error) throw new Error(up.error.message);
   return admin().storage.from("photos").getPublicUrl(path).data.publicUrl;
 }

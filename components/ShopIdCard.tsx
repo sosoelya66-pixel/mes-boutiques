@@ -24,7 +24,7 @@ export function ShopIdCard({ shop, onClose, onEdit }: { shop: Shop; onClose: () 
         </div>
         <div className="mt-3 flex items-center gap-4">
           {shop.avatar_url ? (
-            <img
+            <img loading="lazy" decoding="async"
               src={shop.avatar_url}
               alt={`Avatar de ${shop.nom}`}
               className="h-20 w-20 rounded-full object-cover ring-2"
@@ -62,7 +62,7 @@ export function ShopIdCard({ shop, onClose, onEdit }: { shop: Shop; onClose: () 
           <div key={label} className="min-w-0">
             {url ? (
               <a href={url} target="_blank" rel="noreferrer" title="Ouvrir la photo (à joindre dans ChatGPT)">
-                <img src={url} alt={label} className="aspect-[3/4] w-full rounded-xl object-cover ring-1 ring-white/10 hover:ring-white/40" />
+                <img loading="lazy" decoding="async" src={url} alt={label} className="aspect-[3/4] w-full rounded-xl object-cover ring-1 ring-white/10 hover:ring-white/40" />
               </a>
             ) : (
               <button

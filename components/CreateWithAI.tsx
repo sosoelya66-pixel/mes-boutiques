@@ -112,7 +112,7 @@ export function CreateWithAI({ onClose, onStarted }: { onClose: () => void; onSt
             <div className="mt-1.5 flex flex-wrap gap-2">
               {produit.map((p, i) => (
                 <div key={p} className="relative">
-                  <img src={p} alt="" className="h-20 w-20 rounded-lg object-cover" />
+                  <img loading="lazy" decoding="async" src={p} alt="" className="h-20 w-20 rounded-lg object-cover" />
                   <button
                     type="button"
                     onClick={() => setProduit(produit.filter((_, j) => j !== i))}

@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 export function Thumb({ src, size = 44, alt = "" }: { src: string | null; size?: number; alt?: string }) {
   return src ? (
-    <img
+    <img loading="lazy" decoding="async"
       src={src}
       alt={alt}
       width={size}

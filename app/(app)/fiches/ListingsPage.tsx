@@ -126,7 +126,7 @@ export function ListingsPage() {
                 className="overflow-hidden rounded-2xl glass text-left transition-colors hover:border-white/20"
               >
                 <div className="relative aspect-[4/5] bg-line">
-                  {l.photos[0] && <img src={l.photos[0]} alt="" className="h-full w-full object-cover" />}
+                  {l.photos[0] && <img loading="lazy" decoding="async" src={l.photos[0]} alt="" className="h-full w-full object-cover" />}
                   <span className="absolute left-2 top-2">
                     {l.generation?.statut === "en_cours" ? (
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-revenue/90 px-2.5 py-0.5 text-xs font-medium text-white shadow-[0_0_12px_rgba(139,124,246,.8)]">

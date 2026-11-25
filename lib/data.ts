@@ -1,4 +1,5 @@
 // Lecture / écriture dans Supabase.
+import { compressImage } from "./image";
 import { supabase } from "./supabase/client";
 import type { Tache, TacheInput } from "./taches";
 import type { EmailLog, Listing, Sale, Shop, SyncState } from "./types";
@@ -93,7 +94,8 @@ async function uid() {
 const ext = (f: File) => (f.name.split(".").pop() || "bin").toLowerCase();
 
 /** Envoie une photo et renvoie son lien public. */
-export async function uploadPhoto(file: File) {
+export async function uploadPhoto(original: File) {
+  const file = await compressImage(original);
   const path = `${await uid()}/${crypto.randomUUID()}.${ext(file)}`;
   check(await supabase.storage.from("photos").upload(path, file, { contentType: file.type }));
   return supabase.storage.from("photos").getPublicUrl(path).data.publicUrl;

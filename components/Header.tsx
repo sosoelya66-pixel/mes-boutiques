@@ -252,7 +252,7 @@ function ShopSelector() {
         className="flex items-center gap-2.5 rounded-xl border border-line bg-card px-3.5 py-2 text-sm font-medium hover:border-white/20"
       >
         <Dot color={current?.couleur} />
-        {current ? current.nom : "Toutes"}
+        <span className="max-w-[90px] truncate sm:max-w-[160px]">{current ? current.nom : "Toutes"}</span>
         <span className="text-muted">▾</span>
       </button>
       {open && (

@@ -62,7 +62,7 @@ export default function BoutiquesPage() {
             <div className="flex items-start justify-between gap-3">
               <button className="flex items-center gap-3 text-left" onClick={() => setIdCard(s)}>
                 {s.avatar_url ? (
-                  <img src={s.avatar_url} alt="" className="h-11 w-11 rounded-full object-cover ring-2" style={{ ["--tw-ring-color" as string]: s.couleur }} />
+                  <img loading="lazy" decoding="async" src={s.avatar_url} alt="" className="h-11 w-11 rounded-full object-cover ring-2" style={{ ["--tw-ring-color" as string]: s.couleur }} />
                 ) : (
                   <Dot color={s.couleur} size={14} />
                 )}
