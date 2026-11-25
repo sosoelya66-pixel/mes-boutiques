@@ -2,11 +2,19 @@
 import { after } from "next/server";
 import { userOk } from "@/lib/auth-server";
 import { createJob } from "@/lib/fiches/job";
+import { PHOTO_TYPES, type PhotoType } from "@/lib/fiches/photoTypes";
 import { triggerStep } from "@/lib/fiches/trigger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
+
+const VALIDES = new Set(PHOTO_TYPES.map((t) => t.value));
+/** Liste des types de photos (4 max) ; à défaut, le nombre de photos demandé. */
+function typesOf(raw: unknown, nb: number) {
+  const types = (Array.isArray(raw) ? raw : []).filter((t): t is PhotoType => typeof t === "string" && VALIDES.has(t as PhotoType)).slice(0, 4);
+  return types.length ? { nb_photos: types.length, photos_types: types } : { nb_photos: Math.max(0, Math.min(4, nb)) };
+}
 
 export async function POST(req: Request) {
   if (!(await userOk())) return Response.json({ error: "Non autorisé" }, { status: 401 });
@@ -26,7 +34,7 @@ export async function POST(req: Request) {
       etat: str(b.etat),
       prix_achat: typeof b.prix_achat === "number" && Number.isFinite(b.prix_achat) ? b.prix_achat : null,
       notes: str(b.notes),
-      nb_photos: Math.max(0, Math.min(4, Number(b.nb_photos ?? 0))),
+      ...typesOf(b.photos_types, Number(b.nb_photos ?? 0)),
     });
     const origin = new URL(req.url).origin;
     after(() => triggerStep(origin, { id, step: "texte" }));

@@ -5,6 +5,8 @@ import { useAppState } from "@/components/AppState";
 import { Modal, ModalTitle } from "@/components/ui/Modal";
 import { uploadPhoto } from "@/lib/data";
 import { styleComplet, stylePhotos } from "@/lib/types";
+import { PhotoTypesPicker } from "@/components/PhotoTypesPicker";
+import { DEFAULT_SERIE, estPortee, type PhotoType } from "@/lib/fiches/photoTypes";
 
 /* eslint-disable @next/next/no-img-element */
 
@@ -37,7 +39,7 @@ export function CreateWithAI({
     notes: initial?.notes ?? "",
   });
   const [produit, setProduit] = useState<string[]>(initial?.photo ? [initial.photo] : []);
-  const [nbPhotos, setNbPhotos] = useState(3);
+  const [types, setTypes] = useState<PhotoType[]>(DEFAULT_SERIE);
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +84,8 @@ export function CreateWithAI({
           notes: [v.notes, selection.length > 1 ? "Rédige un titre et une description différents des autres boutiques (même produit publié sur plusieurs comptes)." : ""]
             .filter(Boolean)
             .join(" "),
-          nb_photos: avecStyle(shop) ? nbPhotos : 0,
+          // Sans avatar : seulement les photos sans personne (sol, cintre)
+          photos_types: avecStyle(shop) ? types : types.filter((t) => !estPortee(t)),
         });
         premier ||= r.id;
       }
@@ -194,27 +197,19 @@ export function CreateWithAI({
           <div className="rounded-xl border border-line p-4 sm:col-span-2">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <div className="text-sm font-medium">Photos portées</div>
+                <div className="text-sm font-medium">Photos (une ligne par photo)</div>
                 <div className="text-xs text-muted">
                   {!selection.length
                     ? "Coche au moins une boutique."
                     : !hasStyle
-                      ? "Carte d'identité sans avatar (Boutiques → Carte d'identité) : pas de photos portées."
-                      : selection.map((s) => `${s.nom} : ${!avecStyle(s) ? "pas d'avatar, sans photos" : styleComplet(s) ? "avatar, fond et sol ✓" : `${stylePhotos(s)}/3 photos`}`).join(" · ")}
+                      ? "Carte d'identité sans avatar : seules les photos à plat ou sur cintre seront faites."
+                      : selection.map((s) => `${s.nom} : ${!avecStyle(s) ? "pas d'avatar (photos portées ignorées)" : styleComplet(s) ? "avatar, fond et sol ✓" : `${stylePhotos(s)}/3 photos`}`).join(" · ")}
                 </div>
               </div>
-              <select
-                className="input w-auto"
-                value={hasStyle ? nbPhotos : 0}
-                disabled={!hasStyle}
-                onChange={(e) => setNbPhotos(Number(e.target.value))}
-              >
-                {[0, 1, 2, 3, 4].map((n) => (
-                  <option key={n} value={n}>
-                    {n === 0 ? "Aucune" : `${n} photo${n > 1 ? "s" : ""}`}
-                  </option>
-                ))}
-              </select>
+            </div>
+            <div className="mt-3">
+              <PhotoTypesPicker value={types} onChange={setTypes} />
+
             </div>
           </div>
 

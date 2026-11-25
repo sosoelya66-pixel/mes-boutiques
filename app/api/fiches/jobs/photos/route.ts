@@ -1,6 +1,7 @@
 // Génère (ou régénère) les photos portées d'une fiche existante, à partir de ses photos produit.
 import { after } from "next/server";
 import { userOk } from "@/lib/auth-server";
+import { PHOTO_TYPES, type PhotoType } from "@/lib/fiches/photoTypes";
 import { triggerStep } from "@/lib/fiches/trigger";
 import { admin, getOwnerId } from "@/lib/supabase/admin";
 
@@ -10,8 +11,10 @@ export const maxDuration = 120;
 
 export async function POST(req: Request) {
   if (!(await userOk())) return Response.json({ error: "Non autorisé" }, { status: 401 });
-  const b = (await req.json().catch(() => ({}))) as { id?: string; nb?: number };
-  const nb = Math.max(1, Math.min(4, Number(b.nb ?? 2)));
+  const b = (await req.json().catch(() => ({}))) as { id?: string; nb?: number; types?: string[] };
+  const valides = new Set<string>(PHOTO_TYPES.map((t) => t.value));
+  const types = (b.types ?? []).filter((t) => valides.has(t)).slice(0, 4) as PhotoType[];
+  const nb = types.length || Math.max(1, Math.min(4, Number(b.nb ?? 2)));
   if (!b.id) return Response.json({ error: "Fiche manquante." }, { status: 400 });
   if (!process.env.OPENAI_API_KEY) return Response.json({ error: "Clé OPENAI_API_KEY manquante dans Vercel." }, { status: 500 });
   const owner = await getOwnerId();
@@ -29,7 +32,7 @@ export async function POST(req: Request) {
   const produit = ((l.photos as string[]) ?? []).filter((u) => !dejaPortees.has(u)).slice(0, 3);
   if (!produit.length)
     return Response.json({ error: "Ajoute d'abord une capture d'écran du produit (Modifier → + Photos)." }, { status: 400 });
-  const params = { ...((g.params as Record<string, unknown>) ?? {}), shop_id: l.shop_id, produit, nb_photos: nb };
+  const params = { ...((g.params as Record<string, unknown>) ?? {}), shop_id: l.shop_id, produit, nb_photos: nb, photos_types: types.length ? types : undefined };
   await admin()
     .from("listings")
     .update({

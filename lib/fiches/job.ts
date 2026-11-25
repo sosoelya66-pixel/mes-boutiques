@@ -8,6 +8,7 @@ import { htmlToText } from "@/lib/sync/run";
 import { humanError } from "./errors";
 import { generateFiche, readProductPage } from "./generate";
 import { briefArticle, verifierPhoto, type BriefData } from "./brief";
+import type { PhotoType } from "./photoTypes";
 import { generateWornPhoto, saveWornPhoto } from "./photos";
 
 export type JobParams = {
@@ -19,6 +20,8 @@ export type JobParams = {
   prix_achat: number | null;
   notes: string | null;
   nb_photos: number;
+  /** Type choisi pour chaque photo (portée de face, à plat au sol…) */
+  photos_types?: PhotoType[];
 };
 
 type Gen = {
@@ -154,7 +157,7 @@ export async function runPhotoStep(id: string, i: number) {
     let data: Buffer | null = null;
     let verdict = "";
     for (let essai = 0; essai < 2; essai++) {
-      data = await generateWornPhoto({ shopId: p.shop_id, productImages: g.ref_images, pose: i, article, brief: brief?.brief_en, correction });
+      data = await generateWornPhoto({ shopId: p.shop_id, productImages: g.ref_images, pose: i, type: p.photos_types?.[i] ?? null, article, brief: brief?.brief_en, correction });
       if (!brief) break;
       const v = await verifierPhoto(g.ref_images, { media_type: "image/jpeg", data }, brief, portees[0] ?? null).catch(() => null);
       if (!v || v.conforme) {

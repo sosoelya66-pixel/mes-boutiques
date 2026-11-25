@@ -12,6 +12,8 @@ import { updateListing } from "@/lib/data";
 import { euros } from "@/lib/format";
 import { shortUrl } from "@/lib/links";
 import { photoPrompt } from "@/lib/prompt";
+import { PhotoTypesPicker } from "@/components/PhotoTypesPicker";
+import { DEFAULT_SERIE, type PhotoType } from "@/lib/fiches/photoTypes";
 import type { Listing, Sale } from "@/lib/types";
 
 /* eslint-disable @next/next/no-img-element */
@@ -19,7 +21,8 @@ import type { Listing, Sale } from "@/lib/types";
 export function ListingModal({ listing, onClose }: { listing: Listing; onClose: () => void }) {
   const { shopById, refresh } = useAppState();
   const [mode, setMode] = useState<"view" | "edit" | "sold">("view");
-  const [nbGen, setNbGen] = useState(2);
+  const avecAvatar = !!(shopById(listing.shop_id)?.avatar_url || shopById(listing.shop_id)?.style_avatar);
+  const [typesGen, setTypesGen] = useState<PhotoType[]>(avecAvatar ? DEFAULT_SERIE : ["sol", "cintre"]);
   const [genBusy, setGenBusy] = useState(false);
   async function genererPhotos() {
     setGenBusy(true);
@@ -27,7 +30,7 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
       const res = await fetch("/api/fiches/jobs/photos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: listing.id, nb: nbGen }),
+        body: JSON.stringify({ id: listing.id, types: typesGen }),
       });
       if (!res.ok) return alert((await res.json().catch(() => ({}))).error ?? "Erreur");
       await refresh();
@@ -167,28 +170,21 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
         </div>
       )}
 
-      {/* Photos portées à la demande */}
-      {listing.generation?.statut !== "en_cours" && shop && (shop.avatar_url || shop.style_avatar) && (
-        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-line p-3 text-sm">
-          <span className="flex-1 text-muted">
-            📸 Photos portées avec l&apos;avatar de {shop.nom}
-            {!listing.photos.length && (
-              <span className="block text-xs">
-                Ajoute d&apos;abord une capture du produit (Modifier → + Photos).
-              </span>
-            )}
-          </span>
-          <select className="input w-auto !py-1.5" value={nbGen} onChange={(e) => setNbGen(Number(e.target.value))}>
-            {[1, 2, 3, 4].map((n) => (
-              <option key={n} value={n}>
-                {n} photo{n > 1 ? "s" : ""}
-              </option>
-            ))}
-          </select>
-          <button className="btn-primary !py-1.5" onClick={genererPhotos} disabled={genBusy || !listing.photos.length}>
-            {genBusy ? "…" : "Générer"}
-          </button>
-        </div>
+      {/* Photos à la demande : on choisit le type de chaque photo */}
+      {listing.generation?.statut !== "en_cours" && shop && (
+        <details className="mt-4 rounded-xl border border-line p-3 text-sm">
+          <summary className="cursor-pointer">📸 Générer des photos ({shop.nom})</summary>
+          {!listing.photos.length ? (
+            <p className="mt-2 text-xs text-alert">Ajoute d&apos;abord une capture du produit (Modifier → + Photos).</p>
+          ) : (
+            <div className="mt-3 space-y-3">
+              <PhotoTypesPicker value={typesGen} onChange={setTypesGen} porteePossible={!!(shop.avatar_url || shop.style_avatar)} />
+              <button className="btn-primary !py-1.5" onClick={genererPhotos} disabled={genBusy || !typesGen.length}>
+                {genBusy ? "…" : `Générer ${typesGen.length} photo${typesGen.length > 1 ? "s" : ""}`}
+              </button>
+            </div>
+          )}
+        </details>
       )}
 
       <div className="mt-3">
