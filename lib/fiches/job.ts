@@ -29,6 +29,7 @@ type Gen = {
   params: JobParams;
   ref_images: string[]; // images servant de modèle pour les photos portées
   portees: string[]; // photos portées déjà générées
+  anciennes?: string[]; // photos portées d'une génération précédente (gardées à la fin)
 };
 
 async function load(id: string) {
@@ -92,7 +93,10 @@ export async function runTextStep(id: string) {
     const ref = p.produit.length ? p.produit : page?.images.slice(0, 1) ?? [];
     const notes = [`💡 ${f.conseil}`, p.lien && !page ? "Page produit illisible : fiche rédigée d'après les photos." : ""].filter(Boolean).join("\n");
     const photosNext = p.nb_photos > 0 && ref.length > 0;
-    const erreurs = p.nb_photos > 0 && !ref.length ? ["Aucune photo du produit : photos portées impossibles."] : [];
+    const erreurs =
+      p.nb_photos > 0 && !ref.length
+        ? ["Photos portées non faites : Temu/Shein ne laissent pas lire leurs images. Ajoute une capture du produit (Modifier → + Photos), puis « Générer les photos portées »."]
+        : [];
     await save(id, {
       titre: f.titre,
       description: f.description,
@@ -135,7 +139,7 @@ export async function runPhotoStep(id: string, i: number) {
   const more = i + 1 < p.nb_photos;
   await save(id, {
     // Les photos portées passent devant ; les photos produit restent à la fin
-    photos: [...portees, ...p.produit],
+    photos: [...portees, ...p.produit, ...(g.anciennes ?? [])],
     generation: {
       ...g,
       portees,

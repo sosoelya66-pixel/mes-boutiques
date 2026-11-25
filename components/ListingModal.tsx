@@ -19,6 +19,23 @@ import type { Listing, Sale } from "@/lib/types";
 export function ListingModal({ listing, onClose }: { listing: Listing; onClose: () => void }) {
   const { shopById, refresh } = useAppState();
   const [mode, setMode] = useState<"view" | "edit" | "sold">("view");
+  const [nbGen, setNbGen] = useState(2);
+  const [genBusy, setGenBusy] = useState(false);
+  async function genererPhotos() {
+    setGenBusy(true);
+    try {
+      const res = await fetch("/api/fiches/jobs/photos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: listing.id, nb: nbGen }),
+      });
+      if (!res.ok) return alert((await res.json().catch(() => ({}))).error ?? "Erreur");
+      await refresh();
+      onClose();
+    } finally {
+      setGenBusy(false);
+    }
+  }
   const shop = shopById(listing.shop_id);
 
   if (mode === "edit") return <ListingForm listing={listing} onClose={onClose} />;
@@ -123,6 +140,26 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
               <img loading="lazy" decoding="async" src={p} alt="" className="h-36 w-28 rounded-xl object-cover" />
             </a>
           ))}
+        </div>
+      )}
+
+      {/* Photos portées à la demande */}
+      {listing.generation?.statut !== "en_cours" && shop && (shop.avatar_url || shop.style_avatar) && (
+        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-line p-3 text-sm">
+          <span className="flex-1 text-muted">
+            📸 Photos portées avec l&apos;avatar de {shop.nom}
+            {!listing.photos.length && <span className="block text-xs text-alert">Ajoute d&apos;abord une photo du produit (Modifier → + Photos).</span>}
+          </span>
+          <select className="input w-auto !py-1.5" value={nbGen} onChange={(e) => setNbGen(Number(e.target.value))}>
+            {[1, 2, 3, 4].map((n) => (
+              <option key={n} value={n}>
+                {n} photo{n > 1 ? "s" : ""}
+              </option>
+            ))}
+          </select>
+          <button className="btn-primary !py-1.5" onClick={genererPhotos} disabled={genBusy || !listing.photos.length}>
+            {genBusy ? "…" : "Générer"}
+          </button>
         </div>
       )}
 
