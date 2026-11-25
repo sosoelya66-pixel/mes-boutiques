@@ -18,6 +18,8 @@ type Shop = {
   alias_email: string | null;
   actif: boolean;
   avatar_url: string | null;
+  fond_url: string | null;
+  sol_url: string | null;
   style_avatar: string | null;
   style_fond: string | null;
   style_sol: string | null;
@@ -30,7 +32,7 @@ const fail = (message: string) => ({ content: [{ type: "text" as const, text: "E
 async function shops(owner: string): Promise<Shop[]> {
   const { data, error } = await admin()
     .from("shops")
-    .select("id, nom, taille, alias_email, actif, avatar_url, style_avatar, style_fond, style_sol, prompt_photo")
+    .select("id, nom, taille, alias_email, actif, avatar_url, fond_url, sol_url, style_avatar, style_fond, style_sol, prompt_photo")
     .eq("owner_id", owner)
     .order("created_at");
   if (error) throw new Error(error.message);
@@ -118,8 +120,9 @@ export function buildServer(appUrl: string) {
       title: "Lister les boutiques",
       description:
         "Liste les boutiques Vinted de l'utilisateur : nom (pseudo Vinted), taille, alias e-mail, et le style photo " +
-        "à respecter pour les photos portées de cette boutique : avatar (description + photo de référence avatar_url), " +
-        "fond (décor) et sol, et prompt_photo : le prompt ChatGPT à utiliser tel quel pour les photos de cette boutique " +
+        "à respecter pour les photos portées de cette boutique : 3 photos de référence toujours identiques " +
+        "(avatar_url, fond_url pour le décor, sol_url pour le sol) à joindre dans cet ordre, leurs descriptions (style_avatar, " +
+        "style_fond, style_sol), et prompt_photo : le prompt ChatGPT à utiliser tel quel pour les photos de cette boutique " +
         "(remplacer {article} par l'article). Toujours utiliser le style et le prompt de la boutique choisie.",
       annotations: { readOnlyHint: true },
     },

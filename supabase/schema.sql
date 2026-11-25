@@ -179,3 +179,7 @@ alter table public.listings add column if not exists generation jsonb;
 
 -- Carte d'identité (identique à correctif-7)
 alter table public.shops add column if not exists prompt_photo text;
+
+-- Photos fond et sol (identique à correctif-8)
+alter table public.shops add column if not exists fond_url text;
+alter table public.shops add column if not exists sol_url text;

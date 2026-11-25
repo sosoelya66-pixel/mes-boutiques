@@ -11,7 +11,7 @@ import { SyncPanel } from "@/components/SyncPanel";
 import { Thumb } from "@/components/ui/Thumb";
 import { createShop, deleteShop, updateShop, uploadPhoto } from "@/lib/data";
 import { defaultPhotoPrompt } from "@/lib/prompt";
-import type { Shop } from "@/lib/types";
+import { styleComplet, stylePhotos, type Shop } from "@/lib/types";
 import { ShopIdCard } from "@/components/ShopIdCard";
 
 const COLORS = ["#8b7cf6", "#f0a04d", "#4d8af0", "#4fd18b", "#ff6f59", "#e86bc3", "#40c9c9", "#e8d44d", "#a0a3ff", "#9a9cb0"];
@@ -88,10 +88,10 @@ export default function BoutiquesPage() {
               <Row
                 k="Style photo"
                 v={
-                  s.style_avatar || s.style_fond || s.style_sol || s.avatar_url ? (
-                    <span className="text-profit">✓ défini</span>
+                  styleComplet(s) ? (
+                    <span className="text-profit">✓ 3 photos</span>
                   ) : (
-                    <span className="text-alert">à définir</span>
+                    <span className="text-alert">{stylePhotos(s)}/3 photos</span>
                   )
                 }
               />
@@ -162,12 +162,14 @@ function ShopForm({ shop, onClose }: { shop?: Shop; onClose: () => void }) {
     alias_email: shop?.alias_email ?? "",
     couleur: shop?.couleur ?? COLORS[allShops.length % COLORS.length],
     avatar_url: shop?.avatar_url ?? "",
+    fond_url: shop?.fond_url ?? "",
+    sol_url: shop?.sol_url ?? "",
     style_avatar: shop?.style_avatar ?? "",
     style_fond: shop?.style_fond ?? "",
     style_sol: shop?.style_sol ?? "",
     prompt_photo: shop?.prompt_photo ?? "",
   });
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -180,6 +182,8 @@ function ShopForm({ shop, onClose }: { shop?: Shop; onClose: () => void }) {
       alias_email: v.alias_email.trim().toLowerCase() || null,
       couleur: v.couleur,
       avatar_url: v.avatar_url || null,
+      fond_url: v.fond_url || null,
+      sol_url: v.sol_url || null,
       style_avatar: v.style_avatar.trim() || null,
       style_fond: v.style_fond.trim() || null,
       style_sol: v.style_sol.trim() || null,
@@ -240,51 +244,63 @@ function ShopForm({ shop, onClose }: { shop?: Shop; onClose: () => void }) {
           </div>
         </div>
         <div className="rounded-xl border border-line p-4">
-          <div className="text-sm font-semibold">Style photo</div>
+          <div className="text-sm font-semibold">Carte d&apos;identité photo</div>
           <p className="mt-0.5 text-xs text-muted">
-            Repris automatiquement par Cowork pour les photos portées de cette boutique.
+            Les 3 photos de référence, toujours les mêmes, pour que toutes les photos de la boutique se ressemblent. Les descriptions
+            complètent les photos.
           </p>
-          <div className="mt-3 flex items-center gap-3">
-            <Thumb src={v.avatar_url || null} size={56} />
-            <label className="btn cursor-pointer">
-              {uploading ? "Envoi…" : v.avatar_url ? "Changer la photo de l'avatar" : "Photo de référence de l'avatar"}
-              <input
-                type="file"
-                accept="image/*"
-                hidden
-                onChange={async (e) => {
-                  const f = e.target.files?.[0];
-                  if (!f) return;
-                  setUploading(true);
-                  try {
-                    const url = await uploadPhoto(f);
-                    setV((x) => ({ ...x, avatar_url: url }));
-                  } catch (err) {
-                    setError((err as Error).message);
-                  } finally {
-                    setUploading(false);
-                  }
-                }}
-              />
-            </label>
-          </div>
           {(
             [
-              ["style_avatar", "Avatar", "Femme 25 ans, cheveux châtains mi-longs, silhouette fine…"],
-              ["style_fond", "Fond / décor", "Mur blanc cassé, plante verte à gauche, lumière naturelle…"],
-              ["style_sol", "Sol", "Parquet chêne clair…"],
+              ["avatar_url", "style_avatar", "1. Avatar", "Femme 25 ans, cheveux châtains mi-longs, silhouette fine…"],
+              ["fond_url", "style_fond", "2. Fond / décor", "Chambre beige, grand miroir en bois, plante verte à gauche…"],
+              ["sol_url", "style_sol", "3. Sol", "Parquet chêne clair, petit tapis écru…"],
             ] as const
-          ).map(([k, label, ph]) => (
-            <label key={k} className="label mt-3">
-              {label}
+          ).map(([urlKey, textKey, label, ph]) => (
+            <div key={urlKey} className="mt-4 rounded-lg border border-line p-3">
+              <div className="flex items-center gap-3">
+                <Thumb src={v[urlKey] || null} size={64} />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium">
+                    {label} {!v[urlKey] && <span className="text-xs font-normal text-alert">· photo à ajouter</span>}
+                  </div>
+                  <div className="mt-1.5 flex gap-2">
+                    <label className="btn cursor-pointer px-2.5 py-1 text-xs">
+                      {uploading === urlKey ? "Envoi…" : v[urlKey] ? "Changer la photo" : "Ajouter la photo"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        hidden
+                        onChange={async (e) => {
+                          const f = e.target.files?.[0];
+                          if (!f) return;
+                          setUploading(urlKey);
+                          try {
+                            const url = await uploadPhoto(f);
+                            setV((x) => ({ ...x, [urlKey]: url }));
+                          } catch (err) {
+                            setError((err as Error).message);
+                          } finally {
+                            setUploading(null);
+                          }
+                        }}
+                      />
+                    </label>
+                    {v[urlKey] && (
+                      <button type="button" className="text-xs text-muted hover:text-white" onClick={() => setV({ ...v, [urlKey]: "" })}>
+                        Retirer
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
               <textarea
-                className="input mt-1.5"
+                className="input mt-2.5"
                 rows={2}
                 placeholder={ph}
-                value={v[k]}
-                onChange={(e) => setV({ ...v, [k]: e.target.value })}
+                value={v[textKey]}
+                onChange={(e) => setV({ ...v, [textKey]: e.target.value })}
               />
-            </label>
+            </div>
           ))}
           <label className="label mt-3">
             <span className="flex items-center justify-between gap-2">
@@ -314,7 +330,7 @@ function ShopForm({ shop, onClose }: { shop?: Shop; onClose: () => void }) {
           <button type="button" className="btn" onClick={onClose}>
             Annuler
           </button>
-          <button className="btn-primary" disabled={busy || uploading}>
+          <button className="btn-primary" disabled={busy || !!uploading}>
             {busy ? "Enregistrement…" : "Enregistrer"}
           </button>
         </div>

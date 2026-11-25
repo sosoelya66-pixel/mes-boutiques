@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAppState } from "@/components/AppState";
 import { Modal, ModalTitle } from "@/components/ui/Modal";
 import { uploadPhoto } from "@/lib/data";
+import { styleComplet, stylePhotos } from "@/lib/types";
 
 /* eslint-disable @next/next/no-img-element */
 
@@ -155,9 +156,11 @@ export function CreateWithAI({ onClose, onStarted }: { onClose: () => void; onSt
               <div>
                 <div className="text-sm font-medium">Photos portées</div>
                 <div className="text-xs text-muted">
-                  {hasStyle
-                    ? "Générées avec l'avatar, le fond et le sol de la boutique."
-                    : "Style photo de la boutique non défini (Boutiques → Modifier) : pas de photos portées."}
+                  {!hasStyle
+                    ? "Carte d'identité de la boutique sans avatar (Boutiques → Carte d'identité) : pas de photos portées."
+                    : shop && styleComplet(shop)
+                      ? "Générées avec l'avatar, le fond et le sol de la carte d'identité."
+                      : `Carte d'identité incomplète (${shop ? stylePhotos(shop) : 0}/3 photos) : ajoute le fond et le sol pour des photos plus cohérentes.`}
                 </div>
               </div>
               <select

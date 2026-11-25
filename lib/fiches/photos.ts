@@ -2,7 +2,7 @@
 // à partir de l'avatar de la boutique et de la photo du produit.
 import "server-only";
 import OpenAI, { toFile } from "openai";
-import { photoPrompt } from "@/lib/prompt";
+import { imagesOrder, photoPrompt } from "@/lib/prompt";
 import { admin, getOwnerId } from "@/lib/supabase/admin";
 
 export const POSES = [
@@ -17,6 +17,8 @@ type ShopStyle = {
   taille: string | null;
   prompt_photo: string | null;
   avatar_url: string | null;
+  fond_url: string | null;
+  sol_url: string | null;
   style_avatar: string | null;
   style_fond: string | null;
   style_sol: string | null;
@@ -46,7 +48,7 @@ export async function generateWornPhoto(input: {
   const owner = await getOwnerId();
   const { data: shop, error } = await admin()
     .from("shops")
-    .select("nom, taille, prompt_photo, avatar_url, style_avatar, style_fond, style_sol")
+    .select("nom, taille, prompt_photo, avatar_url, fond_url, sol_url, style_avatar, style_fond, style_sol")
     .eq("id", input.shopId)
     .eq("owner_id", owner)
     .maybeSingle<ShopStyle>();
@@ -56,26 +58,13 @@ export async function generateWornPhoto(input: {
 
   const files = [
     ...(shop.avatar_url ? [await download(shop.avatar_url, "avatar")] : []),
+    ...(shop.fond_url ? [await download(shop.fond_url, "fond")] : []),
+    ...(shop.sol_url ? [await download(shop.sol_url, "sol")] : []),
     ...(await Promise.all(input.productImages.slice(0, 3).map((u, i) => download(u, `produit-${i + 1}`)))),
   ];
-  const avatarRef = shop.avatar_url
-    ? "La personne est EXACTEMENT celle de la première image (même visage, mêmes cheveux, même silhouette, même teint)."
-    : "";
-  // Prompt personnalisé de la carte d'identité si elle en a un, sinon prompt construit à partir des champs
-  const prompt = shop.prompt_photo?.trim()
-    ? `${photoPrompt(shop, input.article)}\nPose : ${POSES[input.pose % POSES.length]}.`
-    : [
-    "Photo réaliste pour une annonce Vinted, prise par la personne elle-même devant un miroir avec un iPhone.",
-    avatarRef,
-    shop.style_avatar ? `Personne : ${shop.style_avatar}` : "",
-    `Elle porte EXACTEMENT l'article des photos produit${input.article ? ` (${input.article})` : ""} : même couleur, même coupe, même matière, mêmes détails, sans rien inventer ni ajouter de logo.`,
-    shop.style_fond ? `Décor : ${shop.style_fond}` : "",
-    shop.style_sol ? `Sol : ${shop.style_sol}` : "",
-    `Pose : ${POSES[input.pose % POSES.length]}.`,
-    "Lumière naturelle, rendu authentique de photo de téléphone, légèrement imparfait, sans filtre, sans texte, sans filigrane. Format portrait.",
-  ]
-    .filter(Boolean)
-    .join("\n");
+  // Même prompt que celui copié depuis la carte d'identité (ou ton prompt personnalisé), plus la pose
+  const base = photoPrompt(shop, input.article);
+  const prompt = `${shop.prompt_photo?.trim() ? `${imagesOrder(shop)}\n` : ""}${base}\nPose : ${POSES[input.pose % POSES.length]}.`;
 
   const result = await client.images.edit({
     model: process.env.OPENAI_IMAGE_MODEL || "gpt-image-2",

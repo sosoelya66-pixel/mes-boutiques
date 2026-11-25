@@ -9,7 +9,9 @@ export type Shop = {
   actif: boolean;
   derniere_synchro: string | null;
   // Style photo (avatar, fond, sol) repris par Cowork pour les photos portées
-  avatar_url: string | null;
+  avatar_url: string | null; // photo de référence de l'avatar
+  fond_url: string | null; // photo de référence du décor
+  sol_url: string | null; // photo de référence du sol
   style_avatar: string | null;
   style_fond: string | null;
   style_sol: string | null;
@@ -99,6 +101,11 @@ export const STATUTS: { value: SaleStatus; label: string }[] = [
   { value: "envoye", label: "Envoyé" },
   { value: "termine", label: "Terminé" },
 ];
+
+/** Les 3 photos de référence de la carte d'identité sont-elles toutes là ? */
+export const styleComplet = (s: Pick<Shop, "avatar_url" | "fond_url" | "sol_url">) => !!(s.avatar_url && s.fond_url && s.sol_url);
+export const stylePhotos = (s: Pick<Shop, "avatar_url" | "fond_url" | "sol_url">) =>
+  [s.avatar_url, s.fond_url, s.sol_url].filter(Boolean).length;
 
 export const LISTING_STATUTS: { value: ListingStatus; label: string }[] = [
   { value: "brouillon", label: "Brouillon" },
