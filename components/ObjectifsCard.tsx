@@ -40,7 +40,7 @@ export function ObjectifsCard() {
 
   return (
     <section id="objectifs" className="rise glass rounded-2xl p-5 sm:p-6">
-      <h2 className="text-[15px] font-semibold">🎯 Objectifs du mois</h2>
+      <h2 className="font-display text-[17px] font-semibold">🎯 Objectifs du mois</h2>
       <p className="mt-1 text-sm text-muted">Bénéfice visé chaque mois. Utilisé par la prévision du tableau de bord.</p>
 
       <div className="mt-4 space-y-3">

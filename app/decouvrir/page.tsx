@@ -32,7 +32,7 @@ export default function Decouvrir() {
       <header className="pt-safe flex items-center justify-between py-6">
         <div className="flex items-center gap-2.5">
           <Logo size={36} />
-          <span className="text-lg font-bold">{BRAND.name}</span>
+          <span className="font-display text-xl font-semibold italic">{BRAND.name}</span>
         </div>
         <Link href="/login" className="btn">
           Se connecter
@@ -45,7 +45,7 @@ export default function Decouvrir() {
           <span className="h-1.5 w-1.5 rounded-full bg-profit shadow-[0_0_8px_#4fd18b]" /> Pour les vendeurs multi-boutiques
         </div>
         <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-bold leading-tight tracking-tight sm:text-6xl">
-          <span className="bg-gradient-to-r from-[#b3a8ff] via-[#7fb0ff] to-[#8ef0bb] bg-clip-text text-transparent">{BRAND.tagline}</span>
+          <span className="font-display bg-gradient-to-r from-[#f3e3bf] via-[#d4b483] to-[#a8803f] bg-clip-text italic text-transparent">{BRAND.tagline}</span>
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-base text-muted sm:text-lg">{BRAND.pitch}</p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
@@ -62,7 +62,7 @@ export default function Decouvrir() {
 
       {/* Captures */}
       <section className="rise relative mt-14 sm:mt-20">
-        <div className="pointer-events-none absolute inset-x-10 -top-10 h-64 rounded-full bg-[#8b7cf6] opacity-20 blur-3xl" />
+        <div className="pointer-events-none absolute inset-x-10 -top-10 h-64 rounded-full bg-[#d4b483] opacity-15 blur-3xl" />
         <div className="relative flex items-end justify-center gap-4">
           <img
             src="/presentation/dashboard.webp"
@@ -80,7 +80,7 @@ export default function Decouvrir() {
 
       {/* Fonctions */}
       <section id="fonctions" className="mt-24 scroll-mt-10">
-        <h2 className="text-center text-3xl font-bold">Tout ce qu&apos;il faut, rien de plus</h2>
+        <h2 className="font-display text-center text-3xl font-semibold">Tout ce qu&apos;il faut, rien de plus</h2>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
             <div key={f.title} className="glass glow-corner rounded-2xl p-6">
@@ -94,11 +94,11 @@ export default function Decouvrir() {
 
       {/* Étapes */}
       <section className="mt-24">
-        <h2 className="text-center text-3xl font-bold">Comment ça marche</h2>
+        <h2 className="font-display text-center text-3xl font-semibold">Comment ça marche</h2>
         <div className="mt-10 grid gap-4 sm:grid-cols-3">
           {STEPS.map((s) => (
             <div key={s.n} className="glass rounded-2xl p-6">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold" style={{ background: "linear-gradient(135deg,#8b7cf6,#4d8af0)" }}>
+              <div className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold" style={{ background: "linear-gradient(135deg,#f3e3bf,#b88f52)", color: "#17130c" }}>
                 {s.n}
               </div>
               <h3 className="mt-4 font-semibold">{s.title}</h3>

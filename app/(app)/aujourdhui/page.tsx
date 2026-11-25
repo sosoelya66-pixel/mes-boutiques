@@ -39,7 +39,7 @@ export default function TodayPage() {
         <div className="text-sm capitalize text-muted">
           {now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
         </div>
-        <h2 className="mt-1 text-2xl font-bold">{greeting(now)} 👋</h2>
+        <h2 className="font-display mt-1 text-3xl font-semibold">{greeting(now)} 👋</h2>
       </div>
 
       {/* Chiffres du jour */}

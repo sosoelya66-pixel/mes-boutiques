@@ -100,7 +100,7 @@ export function NotificationsCard() {
     <section id="notifications" className="rise rounded-2xl glass p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="max-w-xl">
-          <h2 className="text-[15px] font-semibold">🔔 Notifications</h2>
+          <h2 className="font-display text-[17px] font-semibold">🔔 Notifications</h2>
           <p className="mt-1 text-sm text-muted">
             Une notification à chaque nouvelle vente, et un rappel chaque matin si des colis attendent depuis plus de 2 jours.
           </p>

@@ -27,7 +27,7 @@ export function Modal({
       onMouseDown={onClose}
     >
       <div
-        className={`rise max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-white/10 bg-[#1b1c2e]/95 p-6 shadow-2xl shadow-black/50 backdrop-blur-xl sm:rounded-2xl ${
+        className={`rise max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-[#d4b483]/15 bg-[#141317]/95 p-6 shadow-2xl shadow-black/50 backdrop-blur-xl sm:rounded-2xl ${
           wide ? "max-w-2xl" : "max-w-md"
         }`}
         onMouseDown={(e) => e.stopPropagation()}

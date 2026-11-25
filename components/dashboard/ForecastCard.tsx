@@ -54,7 +54,7 @@ export function ForecastCard() {
   return (
     <section className="rise glass glow-corner rounded-2xl p-5 sm:p-6" style={{ ["--glow" as string]: "#4fd18b" }}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-[15px] font-semibold">Prévision du mois{shop ? ` · ${shop.nom}` : ""}</h2>
+        <h2 className="font-display text-[17px] font-semibold">Prévision du mois{shop ? ` · ${shop.nom}` : ""}</h2>
         <span className="text-xs text-muted">
           {f.pondere ? "pondérée par jour de la semaine" : "rythme des 14 derniers jours"} · mis à jour à{" "}
           {now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}

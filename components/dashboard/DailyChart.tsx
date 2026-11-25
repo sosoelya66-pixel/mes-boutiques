@@ -101,7 +101,7 @@ export function DailyChart({
               strokeWidth={2.5}
               fill={`url(#${gid})`}
               dot={data.length <= 45 ? { r: 3, fill: color, strokeWidth: 0 } : false}
-              activeDot={{ r: 5, fill: color, stroke: "#12131f", strokeWidth: 2 }}
+              activeDot={{ r: 5, fill: color, stroke: "#0a0a0d", strokeWidth: 2 }}
               isAnimationActive={false}
             />
             {max && max[dataKey] > 0 && (

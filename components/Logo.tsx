@@ -1,38 +1,27 @@
-/** Logo de la marque : trois barres lumineuses qui montent (commandes, chiffre d'affaires, bénéfice). */
+/** Logo Soso : monogramme « S » doré (Playfair Display italique) dans un écrin noir. */
+const S_PATH = "M44.98 16.12L45.86 16.12Q45.42 17.26 44.69 19.44Q43.97 21.62 43.26 25.09L43.26 25.09L42.38 25.09Q42.52 24.48 42.58 23.82Q42.65 23.16 42.65 22.63L42.65 22.63Q42.65 20.91 41.97 19.61Q41.28 18.32 39.90 17.55Q38.51 16.78 36.36 16.78L36.36 16.78Q34.02 16.78 32.40 17.99Q30.77 19.20 30.77 21.84L30.77 21.84Q30.77 23.46 31.54 24.89Q32.31 26.32 33.52 27.67Q34.73 29.01 36.09 30.35Q37.46 31.69 38.64 33.10Q39.83 34.51 40.60 36.07Q41.37 37.63 41.37 39.48L41.37 39.48Q41.37 41.81 40.25 43.46Q39.13 45.11 37.37 46.15Q35.61 47.18 33.56 47.69Q31.52 48.19 29.58 48.19L29.58 48.19Q27.60 48.19 26.30 47.91Q25.00 47.62 24.12 47.14Q23.24 46.65 22.41 46.17L22.41 46.17Q21.97 45.82 21.55 45.66Q21.13 45.51 20.87 45.51L20.87 45.51Q20.30 45.51 19.92 46.06Q19.55 46.61 19.02 47.88L19.02 47.88L18.14 47.88Q18.54 46.92 18.98 45.64Q19.42 44.36 19.94 42.36Q20.47 40.36 21.13 37.32L21.13 37.32L22.01 37.32Q21.84 38.16 21.70 39.06Q21.57 39.96 21.62 40.84L21.62 40.84Q21.75 43.92 23.53 45.60Q25.31 47.27 28.79 47.27L28.79 47.27Q31.74 47.27 33.23 46.01Q34.73 44.76 34.73 42.34L34.73 42.34Q34.73 40.49 34.05 38.97Q33.36 37.46 32.26 36.14Q31.16 34.82 29.93 33.54Q28.70 32.26 27.60 30.92Q26.50 29.58 25.80 28.02Q25.09 26.46 25.09 24.52L25.09 24.52Q25.09 22.32 26.04 20.69Q26.98 19.06 28.50 17.99Q30.02 16.91 31.87 16.36Q33.72 15.81 35.52 15.81L35.52 15.81Q37.90 15.81 39.44 16.38Q40.98 16.95 42.08 17.74L42.08 17.74Q42.56 18.05 42.93 18.25Q43.31 18.45 43.53 18.45L43.53 18.45Q44.14 18.45 44.98 16.12L44.98 16.12Z";
+
 export function Logo({ size = 32, withBg = true }: { size?: number; withBg?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true" className="shrink-0">
       <defs>
-        <linearGradient id="logo-bg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#262844" />
-          <stop offset="1" stopColor="#15162a" />
+        <linearGradient id="soso-or" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#f3e3bf" />
+          <stop offset="0.5" stopColor="#d4b483" />
+          <stop offset="1" stopColor="#a8803f" />
         </linearGradient>
-        <linearGradient id="logo-b1" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#7fb0ff" />
-          <stop offset="1" stopColor="#4d8af0" />
+        <linearGradient id="soso-fond" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#1b1a20" />
+          <stop offset="1" stopColor="#0c0b0f" />
         </linearGradient>
-        <linearGradient id="logo-b2" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#b3a8ff" />
-          <stop offset="1" stopColor="#8b7cf6" />
-        </linearGradient>
-        <linearGradient id="logo-b3" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#8ef0bb" />
-          <stop offset="1" stopColor="#4fd18b" />
-        </linearGradient>
-        <filter id="logo-glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="2.2" result="b" />
-          <feMerge>
-            <feMergeNode in="b" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
       </defs>
-      {withBg && <rect width="64" height="64" rx="16" fill="url(#logo-bg)" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />}
-      <g filter="url(#logo-glow)">
-        <rect x="14" y="35" width="9" height="15" rx="3" fill="url(#logo-b1)" />
-        <rect x="27.5" y="26" width="9" height="24" rx="3" fill="url(#logo-b2)" />
-        <rect x="41" y="15" width="9" height="35" rx="3" fill="url(#logo-b3)" />
-      </g>
+      {withBg && (
+        <>
+          <rect width="64" height="64" rx="16" fill="url(#soso-fond)" />
+          <rect x="3.5" y="3.5" width="57" height="57" rx="13" fill="none" stroke="url(#soso-or)" strokeOpacity="0.55" strokeWidth="1" />
+        </>
+      )}
+      <path d={S_PATH} fill="url(#soso-or)" />
     </svg>
   );
 }

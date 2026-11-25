@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { BRAND } from "@/lib/brand";
-import { Inter } from "next/font/google";
+import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair", weight: ["500", "600", "700"], style: ["normal", "italic"] });
 
 export const metadata: Metadata = {
   title: BRAND.name,
@@ -17,13 +18,13 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#12131f",
+  themeColor: "#0a0a0d",
   viewportFit: "cover", // l'appli occupe tout l'écran (encoche comprise) une fois installée
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={inter.variable}>
+    <html lang="fr" className={`${inter.variable} ${playfair.variable}`}>
       <body className="min-h-screen font-sans">{children}</body>
     </html>
   );

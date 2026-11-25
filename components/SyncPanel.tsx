@@ -86,7 +86,7 @@ export function SyncPanel() {
     <section className="rounded-2xl glass p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-[15px] font-semibold">Synchro e-mails Vinted</h2>
+          <h2 className="font-display text-[17px] font-semibold">Synchro e-mails Vinted</h2>
           <p className="mt-1 text-sm text-muted">
             Boîte iCloud lue en lecture seule, toutes les 15 min. Dernière synchro :{" "}
             <span className="text-white">

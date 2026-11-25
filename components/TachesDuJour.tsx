@@ -182,9 +182,9 @@ export function TachesDuJour() {
   ] as const;
 
   return (
-    <section className="rise glass glow-corner rounded-2xl p-4 sm:p-5" style={{ ["--glow" as string]: "#8b7cf6" }}>
+    <section className="rise glass glow-corner rounded-2xl p-4 sm:p-5" style={{ ["--glow" as string]: "#d4b483" }}>
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-[15px] font-semibold">📋 Ta journée</h3>
+        <h3 className="font-display text-[17px] font-semibold">📋 Ta journée</h3>
         <span className="flex items-center gap-2">
           {labels.length > 0 && (
             <button className="btn !px-2.5 !py-1 !text-xs" onClick={printAll} disabled={printing} title="Imprimer tous les bordereaux">
@@ -199,7 +199,7 @@ export function TachesDuJour() {
       <div className="mt-2 h-2 rounded-full bg-line">
         <div
           className="h-2 rounded-full transition-all"
-          style={{ width: `${pct}%`, background: "linear-gradient(90deg,#8b7cf6,#4fd18b)", boxShadow: "0 0 10px rgba(139,124,246,.6)" }}
+          style={{ width: `${pct}%`, background: "linear-gradient(90deg,#b88f52,#f3e3bf)", boxShadow: "0 0 10px rgba(212,180,131,.6)" }}
         />
       </div>
       {faites === taches.length && taches.length > 0 && <p className="mt-3 text-sm text-profit">🎉 Tout est fait pour aujourd&apos;hui. Bravo !</p>}

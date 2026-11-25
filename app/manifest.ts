@@ -9,8 +9,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Tableau de bord de mes boutiques Vinted",
     start_url: "/aujourdhui",
     display: "standalone",
-    background_color: "#12131f",
-    theme_color: "#12131f",
+    background_color: "#0a0a0d",
+    theme_color: "#0a0a0d",
     lang: "fr",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },

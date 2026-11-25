@@ -27,7 +27,7 @@ export function Header() {
       <div className="flex items-center justify-between gap-3">
         <Link href="/aujourdhui" className="flex min-w-0 items-center gap-2.5">
           <Logo size={34} />
-          <h1 className="truncate text-xl font-bold tracking-tight sm:text-[28px]">{BRAND.name}</h1>
+          <h1 className="font-display truncate text-2xl font-semibold italic sm:text-[30px]">{BRAND.name}</h1>
         </Link>
         <div className="flex items-center gap-2">
           <SyncButton />
@@ -115,7 +115,7 @@ function BottomNav() {
           </div>
         </div>
       )}
-      <nav className="pb-safe fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#12131f]/75 backdrop-blur-xl md:hidden">
+      <nav className="pb-safe fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#0a0a0d]/80 backdrop-blur-xl md:hidden">
         <div className="grid grid-cols-5">
           {items.map((it) => {
             const active = isActive(pathname, it.href);
@@ -127,7 +127,7 @@ function BottomNav() {
                   active ? "text-white" : "text-muted"
                 }`}
               >
-                <span className={active ? "drop-shadow-[0_0_8px_rgba(139,124,246,0.9)]" : ""}>
+                <span className={active ? "text-gold drop-shadow-[0_0_8px_rgba(212,180,131,0.8)]" : ""}>
                   <Icon name={it.icon} />
                 </span>
                 {it.label}
