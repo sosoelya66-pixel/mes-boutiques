@@ -13,6 +13,7 @@ const TABS = [
   { href: "/", label: "Tableau de bord" },
   { href: "/ventes", label: "Ventes et bordereaux" },
   { href: "/fiches", label: "Fiches" },
+  { href: "/radar", label: "Radar" },
   { href: "/compta", label: "Compta" },
   { href: "/analyses", label: "Analyses" },
   { href: "/boutiques", label: "Boutiques" },
@@ -86,7 +87,7 @@ function BottomNav() {
     { href: "/ventes", label: "Ventes", icon: "sales", badge: toShip },
     { href: "/fiches", label: "Fiches", icon: "fiches" },
   ];
-  const moreActive = ["/compta", "/analyses", "/boutiques"].some((h) => pathname.startsWith(h));
+  const moreActive = ["/radar", "/compta", "/analyses", "/boutiques"].some((h) => pathname.startsWith(h));
 
   useEffect(() => setMore(false), [pathname]);
 
@@ -99,6 +100,7 @@ function BottomNav() {
             onClick={(e) => e.stopPropagation()}
           >
             {[
+              { href: "/radar", label: "🔎 Radar Temu · Shein" },
               { href: "/compta", label: "Compta" },
               { href: "/analyses", label: "Analyses" },
               { href: "/boutiques", label: "Boutiques et synchro" },

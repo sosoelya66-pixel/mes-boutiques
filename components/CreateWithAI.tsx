@@ -17,17 +17,26 @@ async function post<T>(url: string, body: unknown): Promise<T> {
   return json as T;
 }
 
-export function CreateWithAI({ onClose, onStarted }: { onClose: () => void; onStarted: (id: string) => void }) {
+export function CreateWithAI({
+  onClose,
+  onStarted,
+  initial,
+}: {
+  onClose: () => void;
+  onStarted: (id: string) => void;
+  /** Pré-remplissage (ex. depuis le Radar) */
+  initial?: { shop_id?: string | null; lien?: string; prix_achat?: number; photo?: string | null; notes?: string };
+}) {
   const { shops, shopId, refresh } = useAppState();
   const [v, setV] = useState({
-    shop_id: shopId !== "all" ? shopId : shops[0]?.id ?? "",
-    lien: "",
-    prix_achat: "",
+    shop_id: initial?.shop_id ?? (shopId !== "all" ? shopId : shops[0]?.id ?? ""),
+    lien: initial?.lien ?? "",
+    prix_achat: initial?.prix_achat != null ? String(initial.prix_achat) : "",
     marque: "",
-    etat: "",
-    notes: "",
+    etat: initial ? "Neuf sans étiquette" : "",
+    notes: initial?.notes ?? "",
   });
-  const [produit, setProduit] = useState<string[]>([]);
+  const [produit, setProduit] = useState<string[]>(initial?.photo ? [initial.photo] : []);
   const [nbPhotos, setNbPhotos] = useState(3);
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);

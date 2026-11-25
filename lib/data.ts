@@ -1,6 +1,7 @@
 // Lecture / écriture dans Supabase.
 import { compressImage } from "./image";
 import { supabase } from "./supabase/client";
+import type { RadarRecherche } from "./radar/types";
 import type { Tache, TacheInput } from "./taches";
 import type { EmailLog, Listing, Sale, Shop, SyncState } from "./types";
 
@@ -173,3 +174,11 @@ export async function loadShopSync(): Promise<Record<string, string>> {
   for (const row of r.data as { shop_id: string; recu_le: string }[]) if (!out[row.shop_id]) out[row.shop_id] = row.recu_le;
   return out;
 }
+
+// --- Radar produits ---
+export async function loadRadar() {
+  const r = await supabase.from("radar").select("*").order("created_at", { ascending: false }).limit(15);
+  if (r.error) throw new Error(r.error.message);
+  return r.data as RadarRecherche[];
+}
+export const deleteRadar = async (id: string) => check(await supabase.from("radar").delete().eq("id", id));
