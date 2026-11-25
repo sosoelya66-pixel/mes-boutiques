@@ -176,3 +176,6 @@ alter table public.sync_state add column if not exists derniere_relance date;
 
 -- Fiches en arrière-plan (identique à correctif-6)
 alter table public.listings add column if not exists generation jsonb;
+
+-- Carte d'identité (identique à correctif-7)
+alter table public.shops add column if not exists prompt_photo text;

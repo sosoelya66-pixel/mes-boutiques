@@ -2,6 +2,7 @@
 // à partir de l'avatar de la boutique et de la photo du produit.
 import "server-only";
 import OpenAI, { toFile } from "openai";
+import { photoPrompt } from "@/lib/prompt";
 import { admin, getOwnerId } from "@/lib/supabase/admin";
 
 export const POSES = [
@@ -12,6 +13,9 @@ export const POSES = [
 ];
 
 type ShopStyle = {
+  nom: string;
+  taille: string | null;
+  prompt_photo: string | null;
   avatar_url: string | null;
   style_avatar: string | null;
   style_fond: string | null;
@@ -42,7 +46,7 @@ export async function generateWornPhoto(input: {
   const owner = await getOwnerId();
   const { data: shop, error } = await admin()
     .from("shops")
-    .select("avatar_url, style_avatar, style_fond, style_sol")
+    .select("nom, taille, prompt_photo, avatar_url, style_avatar, style_fond, style_sol")
     .eq("id", input.shopId)
     .eq("owner_id", owner)
     .maybeSingle<ShopStyle>();
@@ -57,7 +61,10 @@ export async function generateWornPhoto(input: {
   const avatarRef = shop.avatar_url
     ? "La personne est EXACTEMENT celle de la première image (même visage, mêmes cheveux, même silhouette, même teint)."
     : "";
-  const prompt = [
+  // Prompt personnalisé de la carte d'identité si elle en a un, sinon prompt construit à partir des champs
+  const prompt = shop.prompt_photo?.trim()
+    ? `${photoPrompt(shop, input.article)}\nPose : ${POSES[input.pose % POSES.length]}.`
+    : [
     "Photo réaliste pour une annonce Vinted, prise par la personne elle-même devant un miroir avec un iPhone.",
     avatarRef,
     shop.style_avatar ? `Personne : ${shop.style_avatar}` : "",

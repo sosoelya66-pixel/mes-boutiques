@@ -3,6 +3,7 @@ import "server-only";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getPeriod, type PeriodKey } from "@/lib/period";
+import { photoPrompt } from "@/lib/prompt";
 import { admin, getOwnerId } from "@/lib/supabase/admin";
 import { evolution, totals } from "@/lib/stats";
 import { benefice, type Listing, type Sale } from "@/lib/types";
@@ -20,6 +21,7 @@ type Shop = {
   style_avatar: string | null;
   style_fond: string | null;
   style_sol: string | null;
+  prompt_photo: string | null;
 };
 
 const ok = (data: unknown) => ({ content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] });
@@ -28,7 +30,7 @@ const fail = (message: string) => ({ content: [{ type: "text" as const, text: "E
 async function shops(owner: string): Promise<Shop[]> {
   const { data, error } = await admin()
     .from("shops")
-    .select("id, nom, taille, alias_email, actif, avatar_url, style_avatar, style_fond, style_sol")
+    .select("id, nom, taille, alias_email, actif, avatar_url, style_avatar, style_fond, style_sol, prompt_photo")
     .eq("owner_id", owner)
     .order("created_at");
   if (error) throw new Error(error.message);
@@ -117,13 +119,14 @@ export function buildServer(appUrl: string) {
       description:
         "Liste les boutiques Vinted de l'utilisateur : nom (pseudo Vinted), taille, alias e-mail, et le style photo " +
         "à respecter pour les photos portées de cette boutique : avatar (description + photo de référence avatar_url), " +
-        "fond (décor) et sol. Toujours utiliser le style de la boutique choisie pour générer les photos.",
+        "fond (décor) et sol, et prompt_photo : le prompt ChatGPT à utiliser tel quel pour les photos de cette boutique " +
+        "(remplacer {article} par l'article). Toujours utiliser le style et le prompt de la boutique choisie.",
       annotations: { readOnlyHint: true },
     },
     async () => {
       try {
         const list = await shops(await getOwnerId());
-        return ok(list.filter((s) => s.actif).map(({ actif: _a, ...s }) => s));
+        return ok(list.filter((s) => s.actif).map(({ actif: _a, ...s }) => ({ ...s, prompt_photo: photoPrompt(s) })));
       } catch (e) {
         return fail((e as Error).message);
       }

@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import { useState } from "react";
 import { useAppState } from "@/components/AppState";
@@ -9,13 +10,16 @@ import { NotificationsCard } from "@/components/NotificationsCard";
 import { SyncPanel } from "@/components/SyncPanel";
 import { Thumb } from "@/components/ui/Thumb";
 import { createShop, deleteShop, updateShop, uploadPhoto } from "@/lib/data";
+import { defaultPhotoPrompt } from "@/lib/prompt";
 import type { Shop } from "@/lib/types";
+import { ShopIdCard } from "@/components/ShopIdCard";
 
 const COLORS = ["#8b7cf6", "#f0a04d", "#4d8af0", "#4fd18b", "#ff6f59", "#e86bc3", "#40c9c9", "#e8d44d", "#a0a3ff", "#9a9cb0"];
 
 export default function BoutiquesPage() {
   const { allShops, allSales, ready, error, refresh } = useAppState();
   const [form, setForm] = useState<Shop | "new" | null>(null);
+  const [idCard, setIdCard] = useState<Shop | null>(null);
   const salesCount = (id: string) => allSales.filter((s) => s.shop_id === id).length;
 
   async function remove(shop: Shop) {
@@ -55,14 +59,21 @@ export default function BoutiquesPage() {
         {active.map((s) => (
           <section key={s.id} className="rounded-2xl glass p-5 sm:p-6">
             <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <Dot color={s.couleur} size={14} />
+              <button className="flex items-center gap-3 text-left" onClick={() => setIdCard(s)}>
+                {s.avatar_url ? (
+                  <img src={s.avatar_url} alt="" className="h-11 w-11 rounded-full object-cover ring-2" style={{ ["--tw-ring-color" as string]: s.couleur }} />
+                ) : (
+                  <Dot color={s.couleur} size={14} />
+                )}
                 <div>
                   <div className="font-semibold">{s.nom}</div>
                   <div className="text-sm text-muted">Taille {s.taille || "—"}</div>
                 </div>
-              </div>
-              <div className="flex gap-2">
+              </button>
+              <div className="flex flex-wrap justify-end gap-2">
+                <button className="btn-primary px-3 py-1.5" onClick={() => setIdCard(s)}>
+                  🪪 Carte d&apos;identité
+                </button>
                 <button className="btn px-3 py-1.5" onClick={() => setForm(s)}>
                   Modifier
                 </button>
@@ -120,6 +131,16 @@ export default function BoutiquesPage() {
       )}
 
       {form && <ShopForm shop={form === "new" ? undefined : form} onClose={() => setForm(null)} />}
+      {idCard && (
+        <ShopIdCard
+          shop={allShops.find((x) => x.id === idCard.id) ?? idCard}
+          onClose={() => setIdCard(null)}
+          onEdit={() => {
+            setForm(allShops.find((x) => x.id === idCard.id) ?? idCard);
+            setIdCard(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -144,6 +165,7 @@ function ShopForm({ shop, onClose }: { shop?: Shop; onClose: () => void }) {
     style_avatar: shop?.style_avatar ?? "",
     style_fond: shop?.style_fond ?? "",
     style_sol: shop?.style_sol ?? "",
+    prompt_photo: shop?.prompt_photo ?? "",
   });
   const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -161,6 +183,7 @@ function ShopForm({ shop, onClose }: { shop?: Shop; onClose: () => void }) {
       style_avatar: v.style_avatar.trim() || null,
       style_fond: v.style_fond.trim() || null,
       style_sol: v.style_sol.trim() || null,
+      prompt_photo: v.prompt_photo.trim() || null,
     };
     try {
       if (shop) await updateShop(shop.id, payload);
@@ -263,6 +286,28 @@ function ShopForm({ shop, onClose }: { shop?: Shop; onClose: () => void }) {
               />
             </label>
           ))}
+          <label className="label mt-3">
+            <span className="flex items-center justify-between gap-2">
+              Prompt ChatGPT
+              <button
+                type="button"
+                className="text-xs text-revenue hover:underline"
+                onClick={() => setV({ ...v, prompt_photo: defaultPhotoPrompt({ ...v, nom: v.nom, taille: v.taille || null, prompt_photo: null }) })}
+              >
+                Créer à partir des champs ci-dessus
+              </button>
+            </span>
+            <textarea
+              className="input mt-1.5 font-mono text-xs"
+              rows={7}
+              placeholder="Colle ici ton prompt ChatGPT habituel. Écris {article} à l'endroit où mettre l'article à porter."
+              value={v.prompt_photo}
+              onChange={(e) => setV({ ...v, prompt_photo: e.target.value })}
+            />
+            <span className="mt-1 block text-xs">
+              Vide = prompt créé automatiquement. <code>{"{article}"}</code> sera remplacé par l&apos;article de la fiche.
+            </span>
+          </label>
         </div>
         {error && <p className="text-sm text-alert">{error}</p>}
         <div className="flex justify-end gap-2 pt-2">

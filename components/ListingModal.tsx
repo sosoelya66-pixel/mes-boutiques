@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/Modal";
 import { updateListing } from "@/lib/data";
 import { euros } from "@/lib/format";
 import { shortUrl } from "@/lib/links";
+import { photoPrompt } from "@/lib/prompt";
 import type { Listing, Sale } from "@/lib/types";
 
 /* eslint-disable @next/next/no-img-element */
@@ -164,8 +165,15 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
         )}
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
         <CopyButton text={all} label="Copier tout" className="!rounded-xl !px-3.5 !py-2 !text-sm" />
+        {shop && (
+          <CopyButton
+            text={photoPrompt(shop, [listing.titre, listing.couleur, listing.matiere].filter(Boolean).join(", "))}
+            label="📋 Prompt photo"
+            className="!rounded-xl !px-3.5 !py-2 !text-sm"
+          />
+        )}
         <button className="btn" onClick={() => setMode("edit")}>
           Modifier
         </button>

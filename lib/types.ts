@@ -13,6 +13,8 @@ export type Shop = {
   style_avatar: string | null;
   style_fond: string | null;
   style_sol: string | null;
+  /** Prompt ChatGPT personnalisé ({article} = l'article à porter) */
+  prompt_photo: string | null;
   created_at: string;
 };
 
