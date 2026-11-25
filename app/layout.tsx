@@ -1,10 +1,21 @@
 import type { Metadata, Viewport } from "next";
 import { BRAND } from "@/lib/brand";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair", weight: ["500", "600", "700"], style: ["normal", "italic"] });
+// Playfair Display incluse dans le projet (pas de téléchargement pendant la publication)
+const playfair = localFont({
+  variable: "--font-playfair",
+  display: "swap",
+  src: [
+    { path: "./fonts/playfair-display-latin-500-normal.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/playfair-display-latin-600-normal.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/playfair-display-latin-600-italic.woff2", weight: "600", style: "italic" },
+    { path: "./fonts/playfair-display-latin-700-italic.woff2", weight: "700", style: "italic" },
+  ],
+});
 
 export const metadata: Metadata = {
   title: BRAND.name,
