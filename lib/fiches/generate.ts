@@ -3,6 +3,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod/v4";
+import { prepareImage } from "./images";
 
 export const FicheData = z.object({
   titre: z.string().describe("Titre Vinted, 50 caractères maximum, avec le type d'article, la marque si connue et un détail utile"),
@@ -106,8 +107,12 @@ export async function generateFiche(input: {
     .filter(Boolean)
     .join("\n");
 
+  const prepared = (await Promise.all(images.map(prepareImage))).filter((x): x is NonNullable<typeof x> => !!x);
   const content: Anthropic.Beta.BetaContentBlockParam[] = [
-    ...images.map((url) => ({ type: "image" as const, source: { type: "url" as const, url } })),
+    ...prepared.map((img) => ({
+      type: "image" as const,
+      source: { type: "base64" as const, media_type: img.media_type, data: img.data.toString("base64") },
+    })),
     { type: "text", text: infos },
   ];
 

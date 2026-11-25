@@ -98,6 +98,21 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
           {listing.generation.erreurs.map((e) => (
             <div key={e}>⚠️ {e}</div>
           ))}
+          <button
+            className="btn mt-2 !py-1.5 !text-xs"
+            onClick={async () => {
+              const res = await fetch("/api/fiches/jobs/retry", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: listing.id }),
+              });
+              if (!res.ok) return alert((await res.json().catch(() => ({}))).error ?? "Erreur");
+              await refresh();
+              onClose();
+            }}
+          >
+            ↻ Relancer la préparation
+          </button>
         </div>
       )}
 

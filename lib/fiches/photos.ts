@@ -3,6 +3,7 @@
 import "server-only";
 import OpenAI, { toFile } from "openai";
 import { imagesOrder, photoPrompt } from "@/lib/prompt";
+import { prepareImage } from "./images";
 import { admin, getOwnerId } from "@/lib/supabase/admin";
 
 export const POSES = [
@@ -25,12 +26,10 @@ type ShopStyle = {
 };
 
 async function download(url: string, name: string) {
-  const res = await fetch(url, { signal: AbortSignal.timeout(20000) });
-  if (!res.ok) throw new Error(`Image inaccessible (${res.status}) : ${url.slice(0, 80)}`);
-  const type = res.headers.get("content-type")?.split(";")[0] ?? "image/png";
-  if (!type.startsWith("image/")) throw new Error("Un des liens ne pointe pas vers une image.");
-  const ext = type.includes("png") ? "png" : type.includes("webp") ? "webp" : "jpg";
-  return toFile(Buffer.from(await res.arrayBuffer()), `${name}.${ext}`, { type });
+  const img = await prepareImage(url);
+  if (!img) throw new Error(`Image illisible (format non pris en charge) : ${name}. Utilise une photo JPEG ou PNG.`);
+  const ext = img.media_type.split("/")[1].replace("jpeg", "jpg");
+  return toFile(img.data, `${name}.${ext}`, { type: img.media_type });
 }
 
 let client: OpenAI | null = null;
@@ -60,8 +59,12 @@ export async function generateWornPhoto(input: {
     ...(shop.avatar_url ? [await download(shop.avatar_url, "avatar")] : []),
     ...(shop.fond_url ? [await download(shop.fond_url, "fond")] : []),
     ...(shop.sol_url ? [await download(shop.sol_url, "sol")] : []),
-    ...(await Promise.all(input.productImages.slice(0, 3).map((u, i) => download(u, `produit-${i + 1}`)))),
+    ...(await Promise.all(input.productImages.slice(0, 3).map((u, i) => download(u, `produit-${i + 1}`).catch(() => null)))).filter(
+      (x): x is NonNullable<typeof x> => !!x
+    ),
   ];
+  const nbRefs = [shop.avatar_url, shop.fond_url, shop.sol_url].filter(Boolean).length;
+  if (files.length <= nbRefs) throw new Error("Aucune photo du produit lisible (format non pris en charge). Ajoute une photo JPEG ou PNG.");
   // Même prompt que celui copié depuis la carte d'identité (ou ton prompt personnalisé), plus la pose
   const base = photoPrompt(shop, input.article);
   const prompt = `${shop.prompt_photo?.trim() ? `${imagesOrder(shop)}\n` : ""}${base}\nPose : ${POSES[input.pose % POSES.length]}.`;
