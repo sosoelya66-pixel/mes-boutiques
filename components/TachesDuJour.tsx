@@ -17,7 +17,8 @@ export function TachesDuJour() {
   const [taches, setTaches] = useState<Tache[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [nouvelle, setNouvelle] = useState("");
-  const [voirFaites, setVoirFaites] = useState(true);
+  const [voirFaites, setVoirFaites] = useState(false);
+  const [partantes, setPartantes] = useState<string[]>([]); // tâches qui s'effacent (animation)
   const emails = useRef(0);
   const jour = jourParis();
 
@@ -45,7 +46,16 @@ export function TachesDuJour() {
   }, [ready, sync]);
 
   async function toggle(t: Tache) {
-    setTaches((l) => l?.map((x) => (x.id === t.id ? { ...x, fait: !x.fait, auto: false } : x)) ?? null);
+    if (!t.fait && !voirFaites) {
+      // Petite animation : la tâche cochée glisse puis disparaît
+      setPartantes((p) => [...p, t.id]);
+      setTimeout(() => {
+        setPartantes((p) => p.filter((x) => x !== t.id));
+        setTaches((l) => l?.map((x) => (x.id === t.id ? { ...x, fait: true, auto: false } : x)) ?? null);
+      }, 450);
+    } else {
+      setTaches((l) => l?.map((x) => (x.id === t.id ? { ...x, fait: !x.fait, auto: false } : x)) ?? null);
+    }
     await setTacheFaite(t.id, !t.fait);
   }
 
@@ -179,15 +189,20 @@ export function TachesDuJour() {
 
       <ul className="mt-3 divide-y divide-line">
         {shown.map((t) => (
-          <li key={t.id} className="flex flex-wrap items-start gap-x-3 gap-y-2 py-2.5 sm:flex-nowrap">
+          <li
+            key={t.id}
+            className={`flex flex-wrap items-start gap-x-3 gap-y-2 py-2.5 transition-all duration-500 sm:flex-nowrap ${
+              partantes.includes(t.id) ? "translate-x-6 opacity-0" : ""
+            }`}
+          >
             <button
               onClick={() => toggle(t)}
               aria-label={t.fait ? "Décocher" : "Cocher"}
               className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border text-sm transition-colors ${
-                t.fait ? "border-profit bg-profit text-night" : "border-white/25 hover:border-white/60"
+                t.fait || partantes.includes(t.id) ? "border-profit bg-profit text-night" : "border-white/25 hover:border-white/60"
               }`}
             >
-              {t.fait ? "✓" : ""}
+              {t.fait || partantes.includes(t.id) ? "✓" : ""}
             </button>
             <div className="min-w-0 flex-1 basis-[60%]">
               <div className={`text-sm ${t.fait ? "text-muted line-through" : "font-medium"}`}>{t.titre}</div>
