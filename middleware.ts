@@ -44,5 +44,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   // Exclus : fichiers techniques, API (connecteur, synchro) et .well-known (découverte OAuth : il n'y en a pas)
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/|\\.well-known/).*)"],
+  // Exclus aussi : icônes et manifeste de l'appli (le téléphone les lit sans être connecté)
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/|\\.well-known/|manifest.webmanifest|.*\\.png$).*)"],
 };

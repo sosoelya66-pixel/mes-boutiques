@@ -6,6 +6,7 @@ import { useAppState } from "@/components/AppState";
 import { euros } from "@/lib/format";
 import { getPeriod, inRange, PERIODS, type PeriodKey } from "@/lib/period";
 import { evolution, ranking, series, totals } from "@/lib/stats";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { AccountsRanking } from "./AccountsRanking";
 import { ActivityBars } from "./ActivityBars";
 import { DailyChart } from "./DailyChart";
@@ -71,11 +72,11 @@ export function Dashboard() {
       </div>
 
       {!view || !ready ? (
-        <div className="h-96" />
+        <Skeleton />
       ) : (
         <>
           {/* 3. Trois grandes cartes */}
-          <div className="grid gap-4 md:grid-cols-3 sm:gap-5">
+          <div className="rise grid gap-4 md:grid-cols-3 sm:gap-5">
             <KpiCard
               label="Bénéfice"
               value={euros(view.cur.benefice)}

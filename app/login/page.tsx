@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Logo } from "@/components/Logo";
 import { supabase } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -24,10 +25,17 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <form onSubmit={submit} className="w-full max-w-sm rounded-2xl border border-line bg-card p-7">
-        <h1 className="text-2xl font-bold">Mes boutiques</h1>
-        <p className="mt-1 text-sm text-muted">Connecte-toi pour accéder au tableau de bord.</p>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+      {/* Halo de couleur discret derrière la carte */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-25 blur-3xl"
+        style={{ background: "radial-gradient(circle, #8b7cf6 0%, #4d8af0 35%, #4fd18b 60%, transparent 70%)" }}
+      />
+      <form onSubmit={submit} className="rise relative w-full max-w-sm rounded-2xl border border-line bg-card/90 p-7 backdrop-blur">
+        <Logo size={48} />
+        <h1 className="mt-5 text-2xl font-bold">Mes boutiques</h1>
+        <p className="mt-1 text-sm text-muted">Toutes tes boutiques Vinted, au même endroit.</p>
         <label className="mt-6 block text-sm text-muted">
           E-mail
           <input

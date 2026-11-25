@@ -7,9 +7,18 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 export const metadata: Metadata = {
   title: "Mes boutiques",
   description: "Tableau de bord de mes boutiques Vinted",
+  applicationName: "Mes boutiques",
+  appleWebApp: { capable: true, title: "Boutiques", statusBarStyle: "black-translucent" },
+  icons: {
+    icon: [{ url: "/favicon-32.png", sizes: "32x32" }, { url: "/icon-192.png", sizes: "192x192" }],
+    apple: "/apple-touch-icon.png",
+  },
 };
 
-export const viewport: Viewport = { themeColor: "#12131f" };
+export const viewport: Viewport = {
+  themeColor: "#12131f",
+  viewportFit: "cover", // l'appli occupe tout l'écran (encoche comprise) une fois installée
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

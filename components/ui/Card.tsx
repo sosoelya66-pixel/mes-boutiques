@@ -10,7 +10,7 @@ export function Card({
   className?: string;
 }) {
   return (
-    <section className={`rounded-2xl border border-line bg-card p-5 sm:p-6 ${className}`}>
+    <section className={`rise rounded-2xl border border-line bg-card p-5 sm:p-6 ${className}`}>
       {(title || right) && (
         <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
           {title && <h2 className="text-[15px] font-semibold">{title}</h2>}
