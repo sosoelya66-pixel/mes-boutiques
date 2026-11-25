@@ -29,8 +29,12 @@ export async function loadAll() {
     fetchAll<Sale>("sales", "date_vente"),
     fetchAll<Listing>("listings", "created_at"),
   ]);
+  const reglages = await supabase.from("reglages").select("objectif_mensuel").maybeSingle();
   return {
-    shops: shops.reverse(), // plus ancienne boutique en premier
+    objectifGlobal: reglages.data?.objectif_mensuel != null ? Number(reglages.data.objectif_mensuel) : null,
+    shops: shops
+      .reverse() // plus ancienne boutique en premier
+      .map((s) => ({ ...s, objectif_mensuel: s.objectif_mensuel != null ? Number(s.objectif_mensuel) : null })),
     sales: sales.map((s) => ({ ...s, prix: num(s.prix), prix_achat: num(s.prix_achat), frais: num(s.frais) })),
     listings: listings.map((l) => ({ ...l, prix: num(l.prix), prix_achat: num(l.prix_achat) })),
   };
@@ -58,6 +62,18 @@ export const createSale = async (v: SaleInput) => check(await supabase.from("sal
 export const updateSale = async (id: string, v: Partial<Sale>) =>
   check(await supabase.from("sales").update(v).eq("id", id));
 export const deleteSale = async (id: string) => check(await supabase.from("sales").delete().eq("id", id));
+
+// --- Objectifs ---
+export async function saveObjectifs(global: number | null, parBoutique: Record<string, number | null>) {
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) throw new Error("Non connecté");
+  check(
+    await supabase
+      .from("reglages")
+      .upsert({ owner_id: data.user.id, objectif_mensuel: global, updated_at: new Date().toISOString() })
+  );
+  for (const [id, v] of Object.entries(parBoutique)) check(await supabase.from("shops").update({ objectif_mensuel: v }).eq("id", id));
+}
 
 // --- Fiches ---
 export const createListing = async (v: ListingInput) =>

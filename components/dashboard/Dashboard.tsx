@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { AccountsRanking } from "./AccountsRanking";
 import { ActivityBars } from "./ActivityBars";
 import { DailyChart } from "./DailyChart";
+import { ForecastCard } from "./ForecastCard";
 import { KpiCard } from "./KpiCard";
 import { LatestSales } from "./LatestSales";
 
@@ -110,6 +111,9 @@ export function Dashboard() {
               color="#4d8af0"
             />
           </div>
+
+          {/* Prévision du mois */}
+          <ForecastCard />
 
           {/* 4. Bandeau colis à envoyer */}
           <Link

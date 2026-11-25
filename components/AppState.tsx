@@ -13,6 +13,10 @@ type State = {
   sales: Sale[]; // filtrées selon la boutique choisie
   listings: Listing[]; // idem
   allSales: Sale[];
+  allListings: Listing[];
+  objectifGlobal: number | null;
+  /** Heure du dernier chargement des données */
+  loadedAt: Date | null;
   shopId: string; // "all" ou l'id d'une boutique
   setShopId: (id: string) => void;
   shopById: (id: string | null) => Shop | undefined;
@@ -24,10 +28,11 @@ type State = {
 
 const Ctx = createContext<State | null>(null);
 
-type Data = { shops: Shop[]; sales: Sale[]; listings: Listing[] };
+type Data = { shops: Shop[]; sales: Sale[]; listings: Listing[]; objectifGlobal: number | null };
 
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
-  const [data, setData] = useState<Data>({ shops: [], sales: [], listings: [] });
+  const [data, setData] = useState<Data>({ shops: [], sales: [], listings: [], objectifGlobal: null });
+  const [loadedAt, setLoadedAt] = useState<Date | null>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shopId, setShopIdState] = useState("all");
@@ -36,6 +41,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const refresh = useCallback(async () => {
     try {
       setData(await loadAll());
+      setLoadedAt(new Date());
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : JSON.stringify(e));
@@ -73,6 +79,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       sales: data.sales.filter(keep),
       listings: data.listings.filter(keep),
       allSales: data.sales,
+      allListings: data.listings,
+      objectifGlobal: data.objectifGlobal,
+      loadedAt,
       shopId: sid,
       setShopId,
       shopById: (id) => data.shops.find((s) => s.id === id),
@@ -84,7 +93,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         window.location.href = "/login";
       },
     };
-  }, [data, shopId, ready, error, refresh, setShopId, userEmail]);
+  }, [data, shopId, ready, error, refresh, setShopId, userEmail, loadedAt]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

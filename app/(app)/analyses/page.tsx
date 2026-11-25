@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useAppState } from "@/components/AppState";
@@ -25,25 +26,15 @@ const pct = (n: number) => `${Math.round(n)} %`;
 const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
 
 export default function AnalysesPage() {
-  const { sales, allSales, listings, shops, shopId, error, ready } = useAppState();
+  const { sales, allSales, listings, shops, shopId, error, ready, objectifGlobal, shopById } = useAppState();
   const [days, setDays] = useState(90);
   const [now, setNow] = useState<Date | null>(null);
-  const [goal, setGoal] = useState<number>(0);
   const [openFiche, setOpenFiche] = useState<Listing | null>(null);
 
   useEffect(() => {
     setNow(new Date());
-    try {
-      setGoal(Number(localStorage.getItem("objectif_benefice") ?? 0));
-    } catch {}
   }, []);
-
-  const saveGoal = (v: number) => {
-    setGoal(v);
-    try {
-      localStorage.setItem("objectif_benefice", String(v));
-    } catch {}
-  };
+  const goal = (shopId !== "all" ? shopById(shopId)?.objectif_mensuel : objectifGlobal) ?? 0;
 
   const a = useMemo(() => {
     if (!now) return null;
@@ -160,19 +151,9 @@ export default function AnalysesPage() {
         className="rise"
         title={`Objectif de ${now.toLocaleDateString("fr-FR", { month: "long" })}`}
         right={
-          <label className="flex items-center gap-2">
-            bénéfice visé
-            <input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              value={goal || ""}
-              placeholder="ex. 500"
-              onChange={(e) => saveGoal(Number(e.target.value))}
-              className="input w-24 py-1 text-right"
-            />
-            €
-          </label>
+          <Link href="/boutiques#objectifs" className="text-revenue hover:underline">
+            {goal ? `objectif ${euros(goal)} · modifier` : "fixer un objectif"}
+          </Link>
         }
       >
         <div className="flex items-baseline justify-between gap-3">

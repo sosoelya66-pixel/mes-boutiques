@@ -7,6 +7,7 @@ import { ErrorBox } from "@/components/dashboard/Dashboard";
 import { Dot } from "@/components/Header";
 import { Modal, ModalTitle } from "@/components/ui/Modal";
 import { NotificationsCard } from "@/components/NotificationsCard";
+import { ObjectifsCard } from "@/components/ObjectifsCard";
 import { SyncPanel } from "@/components/SyncPanel";
 import { Thumb } from "@/components/ui/Thumb";
 import { createShop, deleteShop, updateShop, uploadPhoto } from "@/lib/data";
@@ -103,6 +104,8 @@ export default function BoutiquesPage() {
           </section>
         ))}
       </div>
+
+      <ObjectifsCard />
 
       <NotificationsCard />
 

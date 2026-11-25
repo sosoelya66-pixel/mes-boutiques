@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useAppState } from "@/components/AppState";
+import { forecastMonth } from "@/lib/forecast";
 import { Card } from "@/components/ui/Card";
 import { Dot } from "@/components/Header";
-import { euros } from "@/lib/format";
+import { euros, eurosRond } from "@/lib/format";
 import type { Shop } from "@/lib/types";
 
 const VISIBLE = 6;
@@ -16,6 +18,12 @@ export function AccountsRanking({
   periodLabel: string;
 }) {
   const [all, setAll] = useState(false);
+  const { allSales, loadedAt } = useAppState();
+  // Prévision de fin de mois, boutique par boutique
+  const prev = useMemo(() => {
+    const now = loadedAt ?? new Date();
+    return new Map(rows.map((r) => [r.shop.id, forecastMonth(allSales.filter((x) => x.shop_id === r.shop.id), now)]));
+  }, [rows, allSales, loadedAt]);
   const max = Math.max(1, ...rows.map((r) => r.ca));
   const shown = all ? rows : rows.slice(0, VISIBLE);
   const hidden = rows.length - VISIBLE;
@@ -38,6 +46,23 @@ export function AccountsRanking({
                   style={{ width: `${(r.ca / max) * 100}%`, background: r.shop.couleur }}
                 />
               </div>
+              {(() => {
+                const f = prev.get(r.shop.id);
+                if (!f) return null;
+                const goal = r.shop.objectif_mensuel;
+                return (
+                  <div className="mt-1.5 flex flex-wrap justify-between gap-x-3 text-xs text-muted">
+                    <span>
+                      Prévu fin {f.mois} : <span className="text-profit">{eurosRond(f.benefice.prevu)}</span> de bénéfice
+                    </span>
+                    {goal ? (
+                      <span className={f.benefice.prevu >= goal ? "text-up" : "text-down"}>
+                        {f.benefice.prevu >= goal ? "▲" : "▼"} objectif {eurosRond(goal)}
+                      </span>
+                    ) : null}
+                  </div>
+                );
+              })()}
             </div>
           </li>
         ))}
