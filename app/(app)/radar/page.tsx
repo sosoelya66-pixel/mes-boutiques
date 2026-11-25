@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAppState } from "@/components/AppState";
 import { CreateWithAI } from "@/components/CreateWithAI";
+import { CopyButton } from "@/components/ui/CopyButton";
 import { euros } from "@/lib/format";
 import { deleteRadar, loadRadar } from "@/lib/data";
 import type { RadarProduit, RadarRecherche } from "@/lib/radar/types";
@@ -16,7 +17,13 @@ const CONF: Record<RadarProduit["confiance"], string> = {
 
 export default function RadarPage() {
   const { shops, shopId, shopById } = useAppState();
-  const [v, setV] = useState({ shop_id: shopId !== "all" ? shopId : "", categorie: "", budget: "", lien: "", prix: "" });
+  const [v, setV] = useState({ shop_id: shopId !== "all" ? shopId : "", categorie: "", budget: "", lien: "", prix: "", ville: "Lille" });
+  useEffect(() => {
+    try {
+      const vi = localStorage.getItem("radar_ville");
+      if (vi) setV((x) => ({ ...x, ville: vi }));
+    } catch {}
+  }, []);
   const [mode, setMode] = useState<"chercher" | "lien">("chercher");
   const [list, setList] = useState<RadarRecherche[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +50,9 @@ export default function RadarPage() {
 
   async function lancer() {
     setError(null);
+    try {
+      localStorage.setItem("radar_ville", v.ville);
+    } catch {}
     setSending(true);
     try {
       const res = await fetch("/api/radar", {
@@ -50,8 +60,8 @@ export default function RadarPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           mode === "lien"
-            ? { shop_id: v.shop_id || null, lien: v.lien, prix: parseFloat(v.prix.replace(",", ".")) }
-            : { shop_id: v.shop_id || null, categorie: v.categorie, budget_max: parseFloat(v.budget.replace(",", ".")) }
+            ? { shop_id: v.shop_id || null, lien: v.lien, prix: parseFloat(v.prix.replace(",", ".")), ville: v.ville }
+            : { shop_id: v.shop_id || null, categorie: v.categorie, budget_max: parseFloat(v.budget.replace(",", ".")), ville: v.ville }
         ),
       });
       const j = await res.json().catch(() => ({}));
@@ -119,6 +129,11 @@ export default function RadarPage() {
             </>
           )}
         </div>
+        <label className="label mt-3 block max-w-xs">
+          Livraison à
+          <input className="input mt-1.5" value={v.ville} onChange={(e) => setV({ ...v, ville: e.target.value })} placeholder="Lille" />
+        </label>
+        <p className="mt-2 text-xs text-muted">Seuls les produits revendables au moins ×2 (revente ≥ 2 × prix d&apos;achat) sont affichés.</p>
         {error && <p className="mt-3 text-sm text-alert">{error}</p>}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted">Environ 1 à 2 minutes · tu peux fermer l&apos;appli, une notification te prévient.</p>
@@ -188,6 +203,11 @@ export default function RadarPage() {
         ))
       )}
 
+      <p className="glass rounded-2xl p-4 text-xs text-muted">
+        📱 <b className="text-white">Ouvrir dans l&apos;app {"Temu / Shein"}</b> : touche « Copier le lien », puis ouvre l&apos;app Temu (ou Shein) : elle
+        propose d&apos;ouvrir le lien copié, sinon colle-le dans sa barre de recherche. « Copier le nom » permet aussi de chercher le produit dans
+        l&apos;app.
+      </p>
       <p className="text-center text-xs text-muted">
         Le prix de revente est une estimation de Claude (marché de la seconde main + tes ventes), pas un relevé de Vinted. Vérifie la qualité avant d&apos;acheter en quantité.
       </p>
@@ -219,7 +239,9 @@ function ProduitCard({ p, onFiche }: { p: RadarProduit; onFiche: () => void }) {
         {p.image ? (
           <img src={p.image} alt={p.titre} loading="lazy" className="h-32 w-28 rounded-xl object-cover sm:h-36 sm:w-32" />
         ) : (
-          <div className="flex h-32 w-28 items-center justify-center rounded-xl bg-line text-xs text-muted sm:h-36 sm:w-32">pas de photo</div>
+          <div className="flex h-32 w-28 flex-col items-center justify-center gap-1 rounded-xl bg-line p-2 text-center text-[11px] text-muted sm:h-36 sm:w-32">
+            <span className="text-2xl">{p.plateforme === "shein" ? "🛍" : "🧡"}</span>photo non fournie par {p.plateforme === "shein" ? "Shein" : "Temu"}
+          </div>
         )}
       </a>
       <div className="min-w-0 flex-1">
@@ -256,9 +278,11 @@ function ProduitCard({ p, onFiche }: { p: RadarProduit; onFiche: () => void }) {
         )}
         <p className="mt-1.5 line-clamp-2 text-xs">{p.pourquoi}</p>
         {p.risques && <p className="mt-0.5 line-clamp-1 text-xs text-alert/90">⚠ {p.risques}</p>}
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
+          <CopyButton text={p.lien} label={`📋 Copier le lien ${p.plateforme === "shein" ? "Shein" : "Temu"}`} className="!rounded-xl !px-3 !py-1.5 !text-xs !text-white" />
+          <CopyButton text={p.titre} label="Copier le nom" className="!rounded-xl !px-3 !py-1.5 !text-xs" />
           <a href={p.lien} target="_blank" rel="noreferrer" className="btn !px-3 !py-1.5 !text-xs">
-            Voir le produit ↗
+            ↗
           </a>
           <button onClick={onFiche} className="btn-primary !px-3 !py-1.5 !text-xs">
             ✨ Générer la fiche

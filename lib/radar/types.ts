@@ -4,6 +4,7 @@ export type RadarParams = {
   budget_max: number | null;
   lien: string | null; // analyse d'un lien précis
   prix: number | null; // prix affiché, tapé par l'utilisateur (mode lien)
+  ville?: string | null; // ville de livraison (disponibilité locale)
 };
 
 export type RadarProduit = {

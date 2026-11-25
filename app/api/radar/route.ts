@@ -24,6 +24,7 @@ export async function POST(req: Request) {
       budget_max: Number.isFinite(budget) && budget > 0 ? budget : null,
       lien,
       prix: Number.isFinite(prix) && prix > 0 ? prix : null,
+      ville: str(b.ville) ?? "Lille",
     });
     after(() => executerRecherche(id));
     return Response.json({ id });

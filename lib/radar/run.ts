@@ -86,6 +86,7 @@ const sameProduct = (a: string, b: string) => {
 /** Étape 1 : recherche web (Temu / Shein uniquement). Renvoie le compte rendu et les liens réellement trouvés. */
 async function rechercher(p: RadarParams, ctx: { lignesShops: string; ventes: string }) {
   client ??= new Anthropic();
+  const ville = p.ville?.trim() || "Lille";
   const consigne = p.lien
     ? `Analyse ce produit : ${p.lien}\n${p.prix ? `Prix affiché (donné par la vendeuse) : ${p.prix} €.\n` : ""}Ouvre la page (web_fetch) ou cherche-le. Donne son nom, son prix, une image, et estime à combien il se revend sur Vinted.`
     : [
@@ -94,7 +95,10 @@ async function rechercher(p: RadarParams, ctx: { lignesShops: string; ventes: st
         p.budget_max ? `Prix d'achat maximum : ${p.budget_max} €.` : "",
         "Cherche les pages produit sur temu.com et shein.com (ex. requêtes « site:temu.com sac femme », « shein robe pull »). Les pages Temu/Shein cachent souvent leurs prix : cherche le prix dans les extraits des résultats, dans des comparatifs ou bons plans ; à défaut, indique le prix habituel de ce type de produit sur la plateforme et précise-le.",
         "Pour chaque produit : nom, lien exact de la page produit (temu.com ou shein.com), prix d'achat et sa source (page, résultat de recherche ou estimation), image si visible, et prix de revente réaliste sur Vinted (bas, haut, moyen).",
-        "Privilégie : multiplicateur d'au moins ×2,5, produits tendance cette saison, faciles à photographier portés.",
+        "OBLIGATOIRE : le prix de revente moyen doit être au moins 2 fois le prix d'achat (×2 minimum, idéalement ×2,5 ou plus). Écarte tout produit en dessous.",
+        "Privilégie : produits tendance cette saison, faciles à photographier portés.",
+        `Livraison : ${ville}, France. Ne propose que des produits disponibles et livrables à ${ville} (pages temu.com/fr et fr.shein.com, prix en euros).`,
+        "Pour chaque produit, note l'URL de son image principale si tu la vois (images sur img.kwcdn.com pour Temu, img.ltwebstatic.com pour Shein).",
       ]
         .filter(Boolean)
         .join("\n");
@@ -109,7 +113,7 @@ async function rechercher(p: RadarParams, ctx: { lignesShops: string; ventes: st
 
   const tools: Anthropic.Messages.ToolUnion[] = [
     // Recherche ouverte (pour trouver les prix dans les extraits), jamais sur Vinted
-    { type: "web_search_20260209", name: "web_search", max_uses: p.lien ? 3 : 10, blocked_domains: VINTED, user_location: { type: "approximate", country: "FR" } },
+    { type: "web_search_20260209", name: "web_search", max_uses: p.lien ? 3 : 10, blocked_domains: VINTED, user_location: { type: "approximate", country: "FR", city: ville, region: ville === "Lille" ? "Hauts-de-France" : undefined, timezone: "Europe/Paris" } },
     { type: "web_fetch_20260209", name: "web_fetch", max_uses: p.lien ? 2 : 4, allowed_domains: DOMAINES, max_content_tokens: 8000 },
   ];
   const messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: consigne }];
@@ -151,6 +155,30 @@ async function structurer(texte: string, ctx: { lignesShops: string }) {
   return r.parsed_output;
 }
 
+/** Image principale d'une page Temu / Shein (balise og:image ou image de leur CDN). */
+async function imageFor(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+        "Accept-Language": "fr-FR,fr;q=0.9",
+      },
+      redirect: "follow",
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const html = (await res.text()).slice(0, 2_000_000);
+    const meta =
+      html.match(/<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/i)?.[1] ??
+      html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image)["']/i)?.[1];
+    const cdn = html.match(/https:\/\/(?:img\.kwcdn\.com|aimg\.kwcdn\.com|img\.ltwebstatic\.com)\/[^"'\s\\)]+?\.(?:jpe?g|png|webp)/i)?.[0];
+    const img = (meta ?? cdn ?? "").replace(/&amp;/g, "&");
+    return /^https:\/\//.test(img) ? img : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function creerRecherche(p: RadarParams) {
   const owner = await getOwnerId();
   const { data, error } = await admin().from("radar").insert({ owner_id: owner, params: p }).select("id").single();
@@ -186,7 +214,12 @@ export async function executerRecherche(id: string) {
         marge: Math.round((x.revente_conseillee - x.prix_achat) * 100) / 100,
         multiplicateur: Math.round((x.revente_conseillee / x.prix_achat) * 10) / 10,
       }))
+      .filter((x) => x.multiplicateur >= 2) // au moins ×2
       .sort((a, b) => b.marge - a.marge);
+    // Photo manquante : on la lit sur la page produit (en parallèle, 8 s max)
+    await Promise.all(produits.map(async (x) => {
+      if (!x.image) x.image = await imageFor(x.lien);
+    }));
     await db.from("radar").update({ statut: "termine", resultats: { produits, resume: res.resume } }).eq("id", id);
     await sendPush({
       title: "🔎 Radar terminé",
