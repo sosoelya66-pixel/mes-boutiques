@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
+let PUBLIC_KEY = "";
 
 function keyToBytes(base64: string) {
   const pad = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -19,6 +19,7 @@ export function NotificationsCard() {
 
   useEffect(() => {
     (async () => {
+      PUBLIC_KEY = (await fetch("/api/push/key").then((r) => r.json()).catch(() => ({ key: "" }))).key ?? "";
       if (!PUBLIC_KEY) return setState("nokeys");
       const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
       const standalone =
@@ -117,7 +118,7 @@ export function NotificationsCard() {
             </p>
           )}
           {state === "unsupported" && <p className="mt-2 text-sm text-alert">Ce navigateur ne gère pas les notifications.</p>}
-          {state === "nokeys" && <p className="mt-2 text-sm text-alert">Clés de notification manquantes dans Vercel.</p>}
+          {state === "nokeys" && <p className="mt-2 text-sm text-alert">Clés de notification manquantes dans Vercel (VAPID_PUBLIC_KEY et VAPID_PRIVATE_KEY), ou appli pas encore relancée (Redeploy).</p>}
           {msg && <p className={`mt-2 text-sm ${msg.error ? "text-alert" : "text-profit"}`}>{msg.text}</p>}
         </div>
         <div className="flex gap-2">

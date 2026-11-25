@@ -6,7 +6,7 @@ import { admin, getOwnerId } from "@/lib/supabase/admin";
 export type PushMessage = { title: string; body: string; url?: string; tag?: string };
 
 function configured() {
-  const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const pub = process.env.VAPID_PUBLIC_KEY || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const priv = process.env.VAPID_PRIVATE_KEY;
   if (!pub || !priv) return false;
   webpush.setVapidDetails("mailto:" + (process.env.ALLOWED_EMAIL || "contact@example.com"), pub, priv);
