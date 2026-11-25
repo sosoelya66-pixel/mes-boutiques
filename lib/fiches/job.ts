@@ -156,7 +156,7 @@ export async function runPhotoStep(id: string, i: number) {
     for (let essai = 0; essai < 2; essai++) {
       data = await generateWornPhoto({ shopId: p.shop_id, productImages: g.ref_images, pose: i, article, brief: brief?.brief_en, correction });
       if (!brief) break;
-      const v = await verifierPhoto(g.ref_images, { media_type: "image/jpeg", data }, brief).catch(() => null);
+      const v = await verifierPhoto(g.ref_images, { media_type: "image/jpeg", data }, brief, portees[0] ?? null).catch(() => null);
       if (!v || v.conforme) {
         verdict = essai ? "✓ conforme après correction" : "✓ conforme";
         break;

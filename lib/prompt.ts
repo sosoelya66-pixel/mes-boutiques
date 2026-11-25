@@ -1,4 +1,5 @@
 // Prompt photo d'une boutique, pour garder des photos cohérentes (ChatGPT, générateur de l'appli, Cowork).
+import { REGLES_FR } from "./fiches/regles";
 import type { Shop } from "./types";
 
 type StyleFields = Pick<Shop, "nom" | "taille" | "style_avatar" | "style_fond" | "style_sol" | "prompt_photo"> &
@@ -37,7 +38,8 @@ export function defaultPhotoPrompt(shop: StyleFields) {
 
 /** Le prompt de la boutique (personnalisé s'il existe), avec l'article inséré à la place de {article}. */
 export function photoPrompt(shop: StyleFields, article?: string | null) {
-  const base = shop.prompt_photo?.trim() || defaultPhotoPrompt(shop);
+  // Les règles de fidélité sont toujours ajoutées, même à un prompt personnalisé
+  const base = `${shop.prompt_photo?.trim() || defaultPhotoPrompt(shop)}\n\nRègles de fidélité à l'article :\n- ${REGLES_FR.join("\n- ")}`;
   const what = article?.trim()
     ? `l'article des photos produit jointes (${article.trim()})`
     : "l'article des photos produit jointes";

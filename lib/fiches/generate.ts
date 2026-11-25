@@ -25,6 +25,7 @@ Règles :
 - Description : 3 à 5 lignes naturelles, comme écrites par une vraie personne : ce qu'est l'article, la coupe ou le style, la matière, l'état, la taille, et une phrase pour l'envoi. Pas de liste à puces, pas de mots en majuscules, pas de hashtags, 2 emojis maximum.
 - Ne mentionne jamais le fournisseur (AliExpress, 1688, Shein…), ni le prix d'achat, ni que l'article vient d'un site en ligne.
 - N'invente pas de marque : si elle n'est pas connue, mets null et n'en parle pas.
+- Ne décris que ce qui est visible sur les photos ou écrit sur la page produit : n'invente aucun détail (poches, boutons, doublure, matière…).
 - Prix conseillé : réaliste pour Vinted (articles comparables d'occasion ou neufs), en tenant compte du prix d'achat s'il est connu pour garder une marge correcte.`;
 
 type Page = { titre: string; texte: string; images: string[] };

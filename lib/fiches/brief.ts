@@ -4,6 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod/v4";
 import { prepareImage, type Prepared } from "./images";
+import { REGLES_FR } from "./regles";
 
 let client: Anthropic | null = null;
 const MODEL = () => process.env.ANTHROPIC_MODEL || "claude-opus-5-5";
@@ -54,7 +55,8 @@ export async function briefArticle(productImages: string[], article: string | nu
             type: "text",
             text:
               "Ces images montrent un article à faire porter sur une photo générée. Observe-le avec une extrême précision et compte exactement " +
-              "les boutons, pressions, fermetures, poches, passants, coutures visibles. N'invente rien : si un détail n'est pas visible, ne le mentionne pas." +
+              "les boutons, pressions, fermetures, poches, passants, coutures visibles. N'invente rien : si un détail n'est pas visible, ne le mentionne pas. " +
+              "Dans « a_eviter », reprends ces règles adaptées à l'article :\n- " + REGLES_FR.join("\n- ") +
               (article ? `\nInfos de la fiche : ${article}` : ""),
           },
         ],
@@ -66,9 +68,16 @@ export async function briefArticle(productImages: string[], article: string | nu
 }
 
 /** Après la génération : la photo respecte-t-elle l'article ? */
-export async function verifierPhoto(productImages: string[], photo: Prepared, brief: BriefData): Promise<VerifData> {
+export async function verifierPhoto(
+  productImages: string[],
+  photo: Prepared,
+  brief: BriefData,
+  /** Première photo validée de la série : l'article doit y être identique (couleur, détails) */
+  serie?: string | null
+): Promise<VerifData> {
   client ??= new Anthropic();
   const imgs = await produits(productImages);
+  const serieImg = serie ? await prepareImage(serie) : null;
   const r = await client.beta.messages.parse({
     model: MODEL(),
     max_tokens: 2000,
@@ -79,6 +88,7 @@ export async function verifierPhoto(productImages: string[], photo: Prepared, br
         content: [
           { type: "text", text: "Images de RÉFÉRENCE de l'article :" },
           ...imgs.map(imgBlock),
+          ...(serieImg ? [{ type: "text" as const, text: "PHOTO DÉJÀ VALIDÉE de la même série (l'article doit y être identique) :" }, imgBlock(serieImg)] : []),
           { type: "text", text: "PHOTO GÉNÉRÉE à vérifier :" },
           imgBlock(photo),
           {
@@ -87,6 +97,8 @@ export async function verifierPhoto(productImages: string[], photo: Prepared, br
               "Compare l'article porté sur la photo générée à la référence, point par point. Compte les boutons, poches, fermetures.\n" +
               `Points clés :\n- ${brief.points_cles.join("\n- ")}\n` +
               `À éviter :\n- ${brief.a_eviter.join("\n- ")}\n` +
+              `Règles à faire respecter :\n- ${REGLES_FR.join("\n- ")}\n` +
+              (serieImg ? "Vérifie aussi que l'article est identique à la photo déjà validée (même couleur, mêmes détails).\n" : "") +
               "Ignore le reste de la tenue, la pose et le décor. Une petite différence de lumière n'est pas un écart. " +
               "Les détails cachés par la pose ou le téléphone ne sont pas des écarts.",
           },

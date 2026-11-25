@@ -4,6 +4,7 @@ import "server-only";
 import OpenAI, { toFile } from "openai";
 import { photoPrompt } from "@/lib/prompt";
 import { prepareImage } from "./images";
+import { REGLES_EN } from "./regles";
 import { admin, getOwnerId } from "@/lib/supabase/admin";
 
 // 4 poses nettement différentes (une par photo)
@@ -82,6 +83,7 @@ export async function generateWornPhoto(input: {
     "TASK: Realistic mirror selfie for a Vinted listing. The person from the avatar image wears the EXACT item from the product image(s).",
     ordre,
     "ITEM FIDELITY (most important): copy the item from the product image(s) exactly — same colour and shade, same length, same cut and fit, same collar/neckline, same sleeves, same zips/buttons/closures and their colour, same pockets, same seams, same pattern/print, same fabric texture and sheen. Do NOT add, remove or invent any detail, logo or text. Do not change the item's colour because of the lighting.",
+    REGLES_EN,
     input.brief ? `EXACT ITEM SPECIFICATION (follow strictly, counts are exact): ${input.brief}` : "",
     input.article ? `Item description: ${input.article}` : "",
     input.correction ? `CORRECTION FROM PREVIOUS ATTEMPT (must fix): ${input.correction}` : "",
