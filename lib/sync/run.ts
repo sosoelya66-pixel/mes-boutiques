@@ -24,7 +24,7 @@ export type SyncSummary = {
 const addrText = (a: AddressObject | AddressObject[] | undefined) =>
   (Array.isArray(a) ? a : a ? [a] : []).map((x) => x.text).join(", ");
 
-function htmlToText(html: string) {
+export function htmlToText(html: string) {
   return html
     .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
     .replace(/<br\s*\/?>|<\/(p|div|tr|li|h\d)>/gi, "\n")

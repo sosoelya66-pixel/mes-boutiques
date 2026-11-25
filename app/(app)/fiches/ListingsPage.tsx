@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAppState } from "@/components/AppState";
 import { ErrorBox } from "@/components/dashboard/Dashboard";
 import { Dot } from "@/components/Header";
+import { CreateWithAI } from "@/components/CreateWithAI";
 import { ListingForm } from "@/components/ListingForm";
 import { ListingModal } from "@/components/ListingModal";
 import { ListingBadge } from "@/components/ui/ListingBadge";
@@ -20,6 +21,7 @@ export function ListingsPage() {
   const [q, setQ] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [creatingAI, setCreatingAI] = useState(false);
 
   // Lien direct depuis Cowork : /fiches?fiche=<id>
   useEffect(() => {
@@ -47,12 +49,13 @@ export function ListingsPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <button className="btn-primary" onClick={() => setCreating(true)}>
-          + Nouvelle fiche
+        <button className="btn-primary" onClick={() => setCreatingAI(true)} disabled={!shops.length}>
+          ✨ Créer avec Claude
         </button>
-        <span className="text-sm text-muted">
-          Les fiches créées par Cowork arrivent ici automatiquement.
-        </span>
+        <button className="btn" onClick={() => setCreating(true)}>
+          + Fiche à la main
+        </button>
+        <span className="text-sm text-muted">Les fiches créées par Cowork arrivent aussi ici automatiquement.</span>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
@@ -131,6 +134,15 @@ export function ListingsPage() {
 
       {open && <ListingModal listing={open} onClose={() => setOpenId(null)} />}
       {creating && <ListingForm onClose={() => setCreating(false)} />}
+      {creatingAI && (
+        <CreateWithAI
+          onClose={() => setCreatingAI(false)}
+          onCreated={(id) => {
+            setCreatingAI(false);
+            setOpenId(id);
+          }}
+        />
+      )}
     </div>
   );
 }
