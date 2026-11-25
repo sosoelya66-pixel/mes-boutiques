@@ -36,20 +36,47 @@ export function jourParis(d = new Date()) {
 
 const eur = (n: number) => `${Math.round(n)} €`;
 
-// Une habitude différente selon le jour de la semaine (0 = dimanche)
-const HABITUDES: Record<number, TacheInput> = {
-  0: { cle: "habitude", type: "habitude", titre: "Prépare ta semaine : choisis 5 produits à sourcer", detail: "Regarde Analyses → articles les plus rentables.", lien: "/analyses", ordre: 90 },
-  1: { cle: "habitude", type: "habitude", titre: "Fais le bilan de la semaine dernière", detail: "Analyses → 30 jours : marge, meilleur jour, fiches qui dorment.", lien: "/analyses", ordre: 90 },
-  2: { cle: "habitude", type: "habitude", titre: "Tourne 1 vidéo TikTok", detail: "Montre un colis du jour ou ton tableau de bord.", lien: null, ordre: 90 },
-  3: { cle: "habitude", type: "habitude", titre: "Réponds à toutes les offres et messages Vinted", detail: null, lien: null, ordre: 90 },
-  4: { cle: "habitude", type: "habitude", titre: "Refais la 1re photo d'une annonce qui ne vend pas", detail: "La première photo fait la majorité des clics.", lien: "/analyses", ordre: 90 },
-  5: { cle: "habitude", type: "habitude", titre: "Prépare tes colis du week-end à l'avance", detail: null, lien: "/ventes?statut=a_envoyer", ordre: 90 },
-  6: { cle: "habitude", type: "habitude", titre: "Publie 2 fiches ce matin (le week-end, on navigue plus)", detail: null, lien: "/fiches", ordre: 90 },
-};
+// Banque de défis : 3 différents chaque jour, sans répétition sur la semaine
+const DEFIS: { titre: string; detail: string | null; lien: string | null }[] = [
+  { titre: "Tourne 1 vidéo TikTok : un colis du jour", detail: "Filme l'emballage en 15 secondes.", lien: null },
+  { titre: "Tourne 1 vidéo TikTok : ton tableau de bord", detail: "Montre ton bénéfice du mois (tu peux flouter les montants).", lien: "/" },
+  { titre: "Tourne 1 vidéo TikTok : avant / après d'une photo", detail: "Photo du produit fournisseur → photo portée.", lien: "/fiches" },
+  { titre: "Réponds à toutes les offres et messages Vinted", detail: "Une réponse rapide augmente les ventes.", lien: null },
+  { titre: "Refais la 1re photo d'une annonce qui ne vend pas", detail: "La première photo fait la majorité des clics.", lien: "/analyses" },
+  { titre: "Baisse de 10 % l'annonce la plus ancienne", detail: "Vinted la remonte dans les recherches.", lien: "/analyses" },
+  { titre: "Choisis 3 produits à racheter", detail: "Regarde Analyses → articles les plus rentables.", lien: "/analyses" },
+  { titre: "Cherche 2 nouveaux produits fournisseur", detail: "Colle leurs liens dans « ✨ Créer avec Claude ».", lien: "/fiches" },
+  { titre: "Vérifie ton stock d'emballages", detail: "Sacs, enveloppes, scotch, étiquettes.", lien: null },
+  { titre: "Fais le bilan de la semaine", detail: "Analyses → 30 jours : marge, meilleur jour, fiches qui dorment.", lien: "/analyses" },
+  { titre: "Mets à jour la carte d'identité d'une boutique", detail: "Avatar, fond, sol et prompt photo bien à jour.", lien: "/boutiques" },
+  { titre: "Ajoute 2 mots-clés recherchés dans tes titres", detail: "Ex. « oversize », « vintage », « tendance ».", lien: "/fiches" },
+  { titre: "Poste dans ton Discord : la vente du jour", detail: "Ou une astuce que tu as apprise cette semaine.", lien: null },
+  { titre: "Prépare 5 fiches d'avance en brouillon", detail: "Tu n'auras plus qu'à publier demain.", lien: "/fiches" },
+  { titre: "Regarde ton objectif du mois", detail: "Tableau de bord → Prévision du mois.", lien: "/" },
+  { titre: "Range et photographie 3 articles reçus", detail: null, lien: "/fiches" },
+  { titre: "Mets en avant ton meilleur article", detail: "Remonte-le ou change sa photo principale.", lien: "/fiches" },
+  { titre: "Vérifie tes ventes sans prix ou sans bordereau", detail: null, lien: "/ventes" },
+  { titre: "Publie entre 18 h et 21 h aujourd'hui", detail: "C'est le moment où on navigue le plus sur Vinted.", lien: "/fiches" },
+  { titre: "Note 1 idée de produit vue dans une vidéo tendance", detail: null, lien: null },
+  { titre: "Compare tes boutiques", detail: "Analyses → comparaison : laquelle a besoin d'un coup de pouce ?", lien: "/analyses" },
+];
+
+/** Nombre pseudo-aléatoire stable pour une date (même tirage toute la journée). */
+function graine(jour: string) {
+  let h = 2166136261;
+  for (const c of jour) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return () => {
+    h = Math.imul(h ^ (h >>> 15), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    return ((h ^= h >>> 16) >>> 0) / 4294967296;
+  };
+}
+const numeroJour = (now: Date) => Math.floor(new Date(now.toLocaleString("en-US", { timeZone: "Europe/Paris" })).getTime() / DAY);
 
 /** Construit la liste des tâches du jour. */
 export function buildTaches(d: Data, now = new Date()): TacheInput[] {
   const t: TacheInput[] = [];
+  const rand = graine(jourParis(now));
   const shopName = (id: string | null) => d.shops.find((s) => s.id === id)?.nom ?? "";
 
   // 1. Colis à envoyer (les plus anciens d'abord)
@@ -108,14 +135,25 @@ export function buildTaches(d: Data, now = new Date()): TacheInput[] {
       ordre: 50,
     });
   } else {
-    t.push({ cle: "creer", type: "creer", titre: "Créer 3 nouvelles fiches", detail: "Plus d'annonces en ligne = plus de ventes.", lien: "/fiches", ordre: 50 });
+    // Boutique du jour : chacune son tour ; nombre de fiches variable (2 à 5)
+    const shop = d.shops.length ? d.shops[numeroJour(now) % d.shops.length] : null;
+    const n = 2 + Math.floor(rand() * 4);
+    t.push({
+      cle: "creer",
+      type: "creer",
+      titre: `Créer ${n} fiches${shop ? ` sur ${shop.nom}` : ""}`,
+      detail: shop ? "Boutique du jour : demain ce sera une autre." : "Plus d'annonces en ligne = plus de ventes.",
+      lien: "/fiches",
+      ordre: 50,
+    });
   }
 
   // 6. Annonces qui dorment (les 2 plus anciennes, plus de 21 jours)
   d.listings
     .filter((l) => l.statut === "en_ligne" && now.getTime() - new Date(l.created_at).getTime() > 21 * DAY)
     .sort((a, b) => a.created_at.localeCompare(b.created_at))
-    .slice(0, 2)
+    // 2 annonces différentes chaque jour (on fait tourner la liste)
+    .filter((_, i, arr) => arr.length <= 2 || [(numeroJour(now) * 2) % arr.length, (numeroJour(now) * 2 + 1) % arr.length].includes(i))
     .forEach((l, i) => {
       const jours = Math.floor((now.getTime() - new Date(l.created_at).getTime()) / DAY);
       const nouveau = Math.max(1, Math.round(l.prix * 0.9));
@@ -137,8 +175,13 @@ export function buildTaches(d: Data, now = new Date()): TacheInput[] {
       t.push({ cle: `suivi:${s.id}`, type: "suivi", titre: `Vérifier le suivi : ${s.titre}`, detail: s.suivi ? `n° ${s.suivi}` : "envoyé depuis plus de 7 jours", lien: "/aujourdhui", ordre: 70 + i })
     );
 
-  // 8. Une habitude qui change chaque jour
-  t.push(HABITUDES[new Date(now.toLocaleString("en-US", { timeZone: "Europe/Paris" })).getDay()]);
+  // 8. Trois défis du jour, tirés au sort (différents chaque jour, pas de répétition sur 7 jours)
+  const start = (numeroJour(now) % 7) * 3;
+  const ordreDefis = [...DEFIS.keys()].sort((a, b) => ((a * 7919) % DEFIS.length) - ((b * 7919) % DEFIS.length));
+  for (let k = 0; k < 3; k++) {
+    const defi = DEFIS[ordreDefis[(start + k) % DEFIS.length]];
+    t.push({ cle: `defi:${defi.titre}`, type: "defi", titre: defi.titre, detail: defi.detail, lien: defi.lien, ordre: 90 + k });
+  }
 
   return t;
 }
