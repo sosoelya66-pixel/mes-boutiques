@@ -117,8 +117,8 @@ export async function bordereauLink(value: string) {
 }
 
 // --- Synchro des e-mails ---
-export async function runSyncNow(): Promise<{ message: string }> {
-  const res = await fetch("/api/sync", { method: "POST" });
+export async function runSyncNow(relireJours = 0): Promise<{ message: string }> {
+  const res = await fetch(`/api/sync${relireJours ? `?relire=${relireJours}` : ""}`, { method: "POST" });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.error ?? `Erreur ${res.status}`);
   return json;

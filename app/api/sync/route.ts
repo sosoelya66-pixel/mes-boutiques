@@ -12,7 +12,8 @@ export const maxDuration = 300;
 export async function POST(req: Request) {
   if (!bearerOk(req) && !(await userOk())) return Response.json({ error: "Non autorisé" }, { status: 401 });
   try {
-    const summary = await runSync();
+    const rescan = Math.min(60, Math.max(0, Number(new URL(req.url).searchParams.get("relire") ?? 0)));
+    const summary = await runSync(rescan);
     // Rappel quotidien des colis en attente (au plus une fois par jour, à partir de 9 h)
     await sendReminderIfDue().catch(() => {});
     return Response.json(summary);

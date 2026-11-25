@@ -24,6 +24,30 @@ export type SyncSummary = {
 const addrText = (a: AddressObject | AddressObject[] | undefined) =>
   (Array.isArray(a) ? a : a ? [a] : []).map((x) => x.text).join(", ");
 
+/**
+ * Vrai e-mail de Vinted ? Soit l'adresse est @vinted.xx, soit c'est une adresse relais
+ * d'Apple « Masquer mon adresse e-mail » qui encode l'expéditeur (ex. no-reply_at_vinted_fr_xxx@icloud.com).
+ * Écarte les e-mails d'autres sites qui citent seulement le mot « vinted ».
+ */
+export function isVintedSender(fromAddr: string, mail: ParsedMail) {
+  const a = fromAddr.toLowerCase();
+  if (/@([a-z0-9-]+\.)*vinted\.[a-z.]+$/.test(a)) return true;
+  // « vinted » doit commencer un mot (évite « tikvinted ») et être suivi du pays : vinted_fr, vinted.fr…
+  if (/(^|[._-])vinted[._-](fr|com|be|es|it|de|nl|pl|lt|at|cz|sk|pt|lu|hu|ro|se|fi|dk|gr|hr|ie|co[._-]uk)(?=[._@-]|$)/.test(a)) return true;
+  // Relais Apple « Masquer mon adresse » (adresse @icloud.com…) dont l'expéditeur affiché est Vinted
+  const name = ((Array.isArray(mail.from) ? mail.from[0] : mail.from)?.value?.[0]?.name ?? "").toLowerCase();
+  if (/@(icloud\.com|me\.com|privaterelay\.appleid\.com)$/.test(a) && /(^|\W)vinted(\W|$)/.test(name)) return true;
+  // Relais Apple : l'adresse d'origine est parfois dans un en-tête à part
+  const original = ["x-original-sender", "x-original-from", "reply-to", "sender"]
+    .map((h) => {
+      const v = mail.headers.get(h) as unknown;
+      return typeof v === "string" ? v : v && typeof v === "object" && "text" in v ? String((v as { text: unknown }).text) : "";
+    })
+    .join(" ")
+    .toLowerCase();
+  return /@([a-z0-9-]+\.)*vinted\.[a-z.]+/.test(original);
+}
+
 export function htmlToText(html: string) {
   return html
     .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
@@ -64,7 +88,8 @@ function describe(mail: ParsedMail) {
   return { text, liens, images, recipients, pdfs };
 }
 
-export async function runSync(): Promise<SyncSummary> {
+/** @param rescanDays relit les N derniers jours (e-mails déjà traités ignorés), sans changer le point de reprise */
+export async function runSync(rescanDays = 0): Promise<SyncSummary> {
   const user = process.env.ICLOUD_EMAIL;
   const pass = process.env.ICLOUD_APP_PASSWORD;
   if (!user || !pass) throw new Error("Variables ICLOUD_EMAIL / ICLOUD_APP_PASSWORD manquantes dans Vercel.");
@@ -104,11 +129,13 @@ export async function runSync(): Promise<SyncSummary> {
         lastUid = 0; // la boîte a été réindexée : on repart des 60 derniers jours
         uidValidity = currentValidity;
       }
-      const query =
-        lastUid > 0
+      const startUid = lastUid;
+      const query = rescanDays
+        ? { since: new Date(Date.now() - rescanDays * 86400000), from: "vinted" }
+        : lastUid > 0
           ? { uid: `${lastUid + 1}:*`, from: "vinted" }
           : { since: new Date(Date.now() - FIRST_SYNC_DAYS * 86400000), from: "vinted" };
-      const found = ((await client.search(query, { uid: true })) || []).filter((u) => u > lastUid).sort((a, b) => a - b);
+      const found = ((await client.search(query, { uid: true })) || []).filter((u) => rescanDays || u > lastUid).sort((a, b) => a - b);
       const batch = found.slice(0, BATCH);
       sum.restants = found.length - batch.length;
 
@@ -123,9 +150,24 @@ export async function runSync(): Promise<SyncSummary> {
         const from = addrText(mail.from);
         // E-mail déjà traité (ex. relance de la synchro) : on passe
         const { data: seen } = await db.from("email_log").select("id").eq("message_id", messageId).maybeSingle();
-        // Uniquement les vrais e-mails de Vinted (adresse @vinted.fr, @vinted.com, @mail.vinted.fr…)
         const fromAddr = (Array.isArray(mail.from) ? mail.from[0] : mail.from)?.value?.[0]?.address ?? "";
-        if (seen || !/@([a-z0-9-]+\.)*vinted\.[a-z.]+$/i.test(fromAddr)) {
+        if (seen) {
+          lastUid = uid;
+          continue;
+        }
+        if (!isVintedSender(fromAddr, mail)) {
+          // Écarté sans appeler Claude, mais visible dans le journal
+          await db.from("email_log").insert({
+            owner_id: owner,
+            message_id: messageId,
+            recu_le: (mail.date ?? new Date()).toISOString(),
+            expediteur: from,
+            sujet: mail.subject ?? "",
+            type: "autre",
+            statut: "ignore",
+            detail: `Expéditeur non Vinted (${fromAddr || "adresse inconnue"}) : e-mail non lu.`,
+          });
+          sum.ignores++;
           lastUid = uid;
           continue;
         }
@@ -173,7 +215,9 @@ export async function runSync(): Promise<SyncSummary> {
         }
         lastUid = uid;
       }
-      if (!fatal && sum.restants === 0 && box.uidNext) lastUid = Math.max(lastUid, Number(box.uidNext) - 1);
+      // En relecture, on ne recule jamais le point de reprise
+      if (rescanDays) lastUid = Math.max(startUid, lastUid);
+      else if (!fatal && sum.restants === 0 && box.uidNext) lastUid = Math.max(lastUid, Number(box.uidNext) - 1);
     } finally {
       lock.release();
     }

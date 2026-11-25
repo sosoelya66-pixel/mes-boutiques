@@ -48,11 +48,11 @@ export function SyncPanel() {
     load();
   }, [load]);
 
-  async function sync() {
+  async function sync(relire = 0) {
     setBusy(true);
     setMessage(null);
     try {
-      const r = await runSyncNow();
+      const r = await runSyncNow(relire);
       setMessage(r.message);
     } catch (e) {
       setMessage("Erreur : " + (e as Error).message);
@@ -81,9 +81,14 @@ export function SyncPanel() {
           {error && <p className="mt-1 text-sm text-alert">{error}</p>}
           {message && <p className={`mt-1 text-sm ${message.startsWith("Erreur") ? "text-alert" : "text-profit"}`}>{message}</p>}
         </div>
-        <button className="btn-primary" onClick={sync} disabled={busy}>
-          <span className={busy ? "inline-block animate-spin" : ""}>⟳</span> {busy ? "Synchro…" : "Synchroniser"}
-        </button>
+        <div className="flex flex-col items-end gap-1.5">
+          <button className="btn-primary" onClick={() => sync()} disabled={busy}>
+            <span className={busy ? "inline-block animate-spin" : ""}>⟳</span> {busy ? "Synchro…" : "Synchroniser"}
+          </button>
+          <button className="text-xs text-muted hover:text-white" onClick={() => sync(7)} disabled={busy} title="Relit les e-mails Vinted des 7 derniers jours (ceux déjà traités sont ignorés)">
+            Relire les 7 derniers jours
+          </button>
+        </div>
       </div>
 
       <div className="mt-5 flex items-center justify-between gap-3">
