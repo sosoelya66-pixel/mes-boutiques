@@ -85,8 +85,6 @@ function findSale(sales: SaleRow[], data: EmailData) {
 }
 
 export async function applyEmail(owner: string, meta: MailMeta, data: EmailData): Promise<ApplyResult> {
-  if (data.type === "autre") return { shop_id: null, sale_id: null, statut: "ignore", detail: data.resume };
-
   const db = admin();
   const { data: shops, error: e1 } = await db
     .from("shops")
@@ -94,6 +92,16 @@ export async function applyEmail(owner: string, meta: MailMeta, data: EmailData)
     .eq("owner_id", owner);
   if (e1) throw new Error(e1.message);
   const found = findShop(shops as ShopRow[], meta, data);
+
+  // E-mail sans vente (code, promo…) : ignoré, mais on indique quand même la boutique reconnue
+  if (data.type === "autre")
+    return {
+      shop_id: found?.shop.id ?? null,
+      sale_id: null,
+      statut: "ignore",
+      detail: `${data.resume}${found ? ` · boutique reconnue par ${found.how}` : " · boutique non reconnue"}`,
+    };
+
   if (!found) {
     return {
       shop_id: null,
