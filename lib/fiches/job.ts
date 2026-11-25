@@ -36,12 +36,12 @@ async function load(id: string) {
   const owner = await getOwnerId();
   const { data, error } = await admin()
     .from("listings")
-    .select("id, titre, generation")
+    .select("id, titre, couleur, matiere, description, generation")
     .eq("id", id)
     .eq("owner_id", owner)
     .single();
   if (error || !data) throw new Error("Fiche introuvable.");
-  return data as { id: string; titre: string; generation: Gen };
+  return data as { id: string; titre: string; couleur: string | null; matiere: string | null; description: string | null; generation: Gen };
 }
 
 async function save(id: string, patch: Record<string, unknown>) {
@@ -130,12 +130,16 @@ export async function runTextStep(id: string) {
 
 /** Étape photo n° i (0, 1, 2…). Renvoie true s'il reste des photos à faire. */
 export async function runPhotoStep(id: string, i: number) {
-  const { titre, generation: g } = await load(id);
+  const { titre, couleur, matiere, description, generation: g } = await load(id);
   const p = g.params;
+  // Description détaillée de l'article pour que la photo le respecte
+  const article = [titre, couleur && `couleur ${couleur}`, matiere && `matière ${matiere}`, description?.replace(/\s+/g, " ").slice(0, 400)]
+    .filter(Boolean)
+    .join(" · ");
   let portees = g.portees;
   const erreurs = [...g.erreurs];
   try {
-    const url = await generateWornPhoto({ shopId: p.shop_id, productImages: g.ref_images, pose: i, article: titre });
+    const url = await generateWornPhoto({ shopId: p.shop_id, productImages: g.ref_images, pose: i, article });
     portees = [...portees, url];
   } catch (e) {
     erreurs.push(`Photo ${i + 1} : ${humanError(e, "OpenAI")}`);

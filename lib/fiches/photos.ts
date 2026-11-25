@@ -2,7 +2,7 @@
 // à partir de l'avatar de la boutique et de la photo du produit.
 import "server-only";
 import OpenAI, { toFile } from "openai";
-import { imagesOrder, photoPrompt } from "@/lib/prompt";
+import { photoPrompt } from "@/lib/prompt";
 import { prepareImage } from "./images";
 import { admin, getOwnerId } from "@/lib/supabase/admin";
 
@@ -55,29 +55,57 @@ export async function generateWornPhoto(input: {
   if (!shop.avatar_url && !shop.style_avatar)
     throw new Error("Style photo de la boutique non défini : ajoute l'avatar dans Boutiques → Modifier.");
 
-  const files = [
-    ...(shop.avatar_url ? [await download(shop.avatar_url, "avatar")] : []),
-    ...(shop.fond_url ? [await download(shop.fond_url, "fond")] : []),
-    ...(shop.sol_url ? [await download(shop.sol_url, "sol")] : []),
-    ...(await Promise.all(input.productImages.slice(0, 3).map((u, i) => download(u, `produit-${i + 1}`).catch(() => null)))).filter(
-      (x): x is NonNullable<typeof x> => !!x
-    ),
-  ];
-  const nbRefs = [shop.avatar_url, shop.fond_url, shop.sol_url].filter(Boolean).length;
-  if (files.length <= nbRefs) throw new Error("Aucune photo du produit lisible (format non pris en charge). Ajoute une photo JPEG ou PNG.");
-  // Même prompt que celui copié depuis la carte d'identité (ou ton prompt personnalisé), plus la pose
-  const base = photoPrompt(shop, input.article);
-  const prompt = `${shop.prompt_photo?.trim() ? `${imagesOrder(shop)}\n` : ""}${base}\nPose : ${POSES[input.pose % POSES.length]}.`;
+  // Ordre : le PRODUIT d'abord (le générateur suit au plus près la première image), puis avatar, fond, sol
+  const produits = (
+    await Promise.all(input.productImages.slice(0, 3).map((u, i) => download(u, `produit-${i + 1}`).catch(() => null)))
+  ).filter((x): x is NonNullable<typeof x> => !!x);
+  if (!produits.length) throw new Error("Aucune photo du produit lisible. Ajoute une capture d'écran du produit (PNG ou JPEG).");
+  const refs = [
+    shop.avatar_url ? { label: "the AVATAR (the person to show)", file: await download(shop.avatar_url, "avatar") } : null,
+    shop.fond_url ? { label: "the BACKGROUND / room to reproduce", file: await download(shop.fond_url, "fond") } : null,
+    shop.sol_url ? { label: "the FLOOR to reproduce", file: await download(shop.sol_url, "sol") } : null,
+  ].filter((x): x is NonNullable<typeof x> => !!x);
+  const files = [...produits, ...refs.map((r) => r.file)];
+  const ordre = [
+    ...produits.map((_, i) => `Image ${i + 1}: the GARMENT/ITEM to wear (product reference${produits.length > 1 ? `, view ${i + 1}` : ""}).`),
+    ...refs.map((r, i) => `Image ${produits.length + i + 1}: ${r.label}.`),
+  ].join("\n");
 
+  // Consignes de fidélité (en anglais : le générateur les suit mieux), puis le style de la boutique
+  const fidelite = [
+    "TASK: Realistic mirror selfie for a Vinted listing. The person from the avatar image wears the EXACT item from the product image(s).",
+    ordre,
+    "ITEM FIDELITY (most important): copy the item from the product image(s) exactly — same colour and shade, same length, same cut and fit, same collar/neckline, same sleeves, same zips/buttons/closures and their colour, same pockets, same seams, same pattern/print, same fabric texture and sheen. Do NOT add, remove or invent any detail, logo or text. Do not change the item's colour because of the lighting.",
+    input.article ? `Item description: ${input.article}` : "",
+    shop.taille ? `The item is worn in size ${shop.taille}, with a natural, realistic fit.` : "",
+    "PERSON: keep the avatar's face, hair, skin tone and body shape identical. The phone may partially hide the face.",
+    shop.fond_url || shop.style_fond ? "SETTING: reproduce the background/room exactly as in its reference image (walls, mirror, furniture, plants, light)." : "",
+    shop.sol_url || shop.style_sol ? "FLOOR: reproduce the floor exactly as in its reference image." : "",
+    `POSE: ${POSES[input.pose % POSES.length]}. The whole item must be clearly visible.`,
+    "STYLE: natural daylight, authentic iPhone photo, slightly imperfect, no filter, no text, no watermark, portrait format.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  // Le prompt de la carte d'identité (ou ton prompt perso) est ajouté comme précisions de style
+  // (sans la ligne « Images jointes dans l'ordre… », l'ordre ici est différent)
+  const notes = photoPrompt(shop, input.article)
+    .split("\n")
+    .filter((l) => !l.startsWith("Images jointes"))
+    .join("\n");
+  const prompt = `${fidelite}\n\nStyle notes from the shop (French):\n${notes}`.slice(0, 31000);
+
+  const model = process.env.OPENAI_IMAGE_MODEL || "gpt-image-2";
   const result = await client.images.edit({
-    model: process.env.OPENAI_IMAGE_MODEL || "gpt-image-2",
+    model,
     image: files,
     prompt,
     size: "1024x1536",
     // JPEG compressé : ~10 fois plus léger qu'un PNG, chargement rapide sur téléphone
     output_format: "jpeg",
     output_compression: 85,
-    quality: (process.env.OPENAI_IMAGE_QUALITY as "low" | "medium" | "high" | undefined) || "medium",
+    quality: (process.env.OPENAI_IMAGE_QUALITY as "low" | "medium" | "high" | undefined) || "high",
+    // Haute fidélité aux images fournies (option prise en charge par gpt-image-1.5 uniquement)
+    ...(model.startsWith("gpt-image-1.5") ? { input_fidelity: "high" as const } : {}),
   });
   const b64 = result.data?.[0]?.b64_json;
   if (!b64) throw new Error("Aucune image renvoyée par le générateur.");
