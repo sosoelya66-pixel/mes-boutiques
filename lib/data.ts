@@ -48,7 +48,7 @@ function check<T>(r: { data: T; error: { message: string } | null }) {
 }
 
 // --- Boutiques ---
-export type ShopInput = Pick<
+export type ShopInput = Partial<Pick<Shop, "tenue">> & Pick<
   Shop,
   "nom" | "taille" | "alias_email" | "couleur" | "avatar_url" | "fond_url" | "sol_url" | "style_avatar" | "style_fond" | "style_sol" | "prompt_photo"
 >;

@@ -224,3 +224,6 @@ create policy "proprio" on public.taches for all to authenticated
 grant select, insert, update, delete on public.taches to authenticated;
 grant select, insert, update, delete on public.taches to service_role;
 
+
+-- Tenue de base (identique à correctif-11-tenue)
+alter table public.shops add column if not exists tenue text;

@@ -81,6 +81,16 @@ export function ShopIdCard({ shop, onClose, onEdit }: { shop: Shop; onClose: () 
       </div>
       <p className="mt-2 text-xs text-muted">Touche une photo pour l&apos;ouvrir et l&apos;enregistrer, puis joins-la dans ChatGPT.</p>
 
+      {shop.tenue && (
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-line px-3 py-2 text-sm">
+          <span>
+            <span className="text-muted">Tenue de base : </span>
+            {shop.tenue}
+          </span>
+          <CopyButton text={shop.tenue} />
+        </div>
+      )}
+
       {/* Prompt photo */}
       <div className="mt-5 rounded-xl border border-revenue/40 bg-revenue/[0.07] p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">

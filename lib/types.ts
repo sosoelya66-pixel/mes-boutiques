@@ -17,6 +17,8 @@ export type Shop = {
   style_sol: string | null;
   /** Objectif de bénéfice mensuel de la boutique (€) */
   objectif_mensuel?: number | null;
+  /** Tenue de base portée avec chaque article (ex. « legging noir, baskets blanches ») */
+  tenue?: string | null;
   /** Prompt ChatGPT personnalisé ({article} = l'article à porter) */
   prompt_photo: string | null;
   created_at: string;
@@ -96,6 +98,8 @@ export type ListingGeneration = {
   photos_prevues: number;
   photos_faites: number;
   erreurs: string[];
+  brief?: { resume_fr: string; points_cles: string[] };
+  controles?: string[];
 };
 
 export const STATUTS: { value: SaleStatus; label: string }[] = [

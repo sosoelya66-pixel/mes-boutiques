@@ -179,6 +179,7 @@ function ShopForm({ shop, onClose }: { shop?: Shop; onClose: () => void }) {
     style_fond: shop?.style_fond ?? "",
     style_sol: shop?.style_sol ?? "",
     prompt_photo: shop?.prompt_photo ?? "",
+    tenue: shop?.tenue ?? "",
   });
   const [uploading, setUploading] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -199,6 +200,8 @@ function ShopForm({ shop, onClose }: { shop?: Shop; onClose: () => void }) {
       style_fond: v.style_fond.trim() || null,
       style_sol: v.style_sol.trim() || null,
       prompt_photo: v.prompt_photo.trim() || null,
+      // n'envoie la tenue que si elle est remplie (colonne ajoutée par le correctif 11)
+      ...(v.tenue.trim() || shop?.tenue ? { tenue: v.tenue.trim() || null } : {}),
     };
     try {
       if (shop) await updateShop(shop.id, payload);
@@ -313,6 +316,16 @@ function ShopForm({ shop, onClose }: { shop?: Shop; onClose: () => void }) {
               />
             </div>
           ))}
+          <label className="label mt-4">
+            Tenue de base
+            <input
+              className="input mt-1.5"
+              placeholder="ex. legging noir, baskets blanches"
+              value={v.tenue}
+              onChange={(e) => setV({ ...v, tenue: e.target.value })}
+            />
+            <span className="mt-1 block text-xs">Portée avec chaque article, pour que toutes les photos de la boutique se ressemblent.</span>
+          </label>
           <label className="label mt-3">
             <span className="flex items-center justify-between gap-2">
               Prompt ChatGPT

@@ -7,7 +7,8 @@ import { admin, getOwnerId } from "@/lib/supabase/admin";
 import { htmlToText } from "@/lib/sync/run";
 import { humanError } from "./errors";
 import { generateFiche, readProductPage } from "./generate";
-import { generateWornPhoto } from "./photos";
+import { briefArticle, verifierPhoto, type BriefData } from "./brief";
+import { generateWornPhoto, saveWornPhoto } from "./photos";
 
 export type JobParams = {
   shop_id: string;
@@ -30,6 +31,8 @@ type Gen = {
   ref_images: string[]; // images servant de modèle pour les photos portées
   portees: string[]; // photos portées déjà générées
   anciennes?: string[]; // photos portées d'une génération précédente (gardées à la fin)
+  brief?: BriefData; // fiche technique visuelle de l'article (écrite par Claude)
+  controles?: string[]; // résultat de la vérification de chaque photo
 };
 
 async function load(id: string) {
@@ -138,9 +141,31 @@ export async function runPhotoStep(id: string, i: number) {
     .join(" · ");
   let portees = g.portees;
   const erreurs = [...g.erreurs];
+  let brief = g.brief;
+  const controles = [...(g.controles ?? [])];
   try {
-    const url = await generateWornPhoto({ shopId: p.shop_id, productImages: g.ref_images, pose: i, article });
-    portees = [...portees, url];
+    // 1. Brief : une seule fois par série, à partir des captures
+    if (!brief) {
+      brief = await briefArticle(g.ref_images, article).catch(() => undefined);
+      if (brief) await save(id, { generation: { ...g, brief, etape: `Photo ${i + 1}/${p.nb_photos}` } });
+    }
+    // 2. Génération, puis vérification par Claude ; une nouvelle tentative corrigée si besoin
+    let correction: string | null = null;
+    let data: Buffer | null = null;
+    let verdict = "";
+    for (let essai = 0; essai < 2; essai++) {
+      data = await generateWornPhoto({ shopId: p.shop_id, productImages: g.ref_images, pose: i, article, brief: brief?.brief_en, correction });
+      if (!brief) break;
+      const v = await verifierPhoto(g.ref_images, { media_type: "image/jpeg", data }, brief).catch(() => null);
+      if (!v || v.conforme) {
+        verdict = essai ? "✓ conforme après correction" : "✓ conforme";
+        break;
+      }
+      verdict = `⚠ ${v.ecarts.join(", ")}`;
+      correction = v.correction_en || v.ecarts.join("; ");
+    }
+    portees = [...portees, await saveWornPhoto(data!)];
+    controles.push(`Photo ${i + 1} : ${verdict || "non vérifiée"}`);
   } catch (e) {
     erreurs.push(`Photo ${i + 1} : ${humanError(e, "OpenAI")}`);
   }
@@ -152,6 +177,8 @@ export async function runPhotoStep(id: string, i: number) {
       ...g,
       portees,
       erreurs,
+      brief,
+      controles,
       photos_faites: portees.length,
       statut: more ? "en_cours" : erreurs.length && !portees.length ? "erreur" : "termine",
       etape: more ? `Photo ${i + 2}/${p.nb_photos}` : "Terminé",

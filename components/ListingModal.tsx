@@ -133,6 +133,30 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
         </div>
       )}
 
+      {(listing.generation?.brief || listing.generation?.controles?.length) && (
+        <details className="mt-4 rounded-xl border border-line px-4 py-2.5 text-sm">
+          <summary className="cursor-pointer text-muted">
+            📋 Brief photo et vérification
+            {listing.generation?.controles?.some((c) => c.includes("⚠")) && <span className="ml-2 text-alert">· écart signalé</span>}
+          </summary>
+          {listing.generation?.brief && (
+            <div className="mt-2 whitespace-pre-line text-xs text-muted">
+              {listing.generation.brief.resume_fr}
+              <ul className="mt-2 list-disc pl-4">
+                {listing.generation.brief.points_cles.map((p) => (
+                  <li key={p}>{p}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {listing.generation?.controles?.map((c) => (
+            <div key={c} className={`mt-1 text-xs ${c.includes("⚠") ? "text-alert" : "text-profit"}`}>
+              {c}
+            </div>
+          ))}
+        </details>
+      )}
+
       {listing.photos.length > 0 && (
         <div className="no-scrollbar -mx-6 mt-4 flex gap-2 overflow-x-auto px-6">
           {listing.photos.map((p) => (

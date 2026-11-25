@@ -2,6 +2,7 @@
 import type { Shop } from "./types";
 
 type StyleFields = Pick<Shop, "nom" | "taille" | "style_avatar" | "style_fond" | "style_sol" | "prompt_photo"> &
+  Partial<Pick<Shop, "tenue">> &
   Partial<Pick<Shop, "avatar_url" | "fond_url" | "sol_url">>;
 
 /** Ordre des images à joindre (avatar, fond, sol, puis le produit). */
@@ -25,6 +26,7 @@ export function defaultPhotoPrompt(shop: StyleFields) {
     shop.style_avatar ? `Personne : ${shop.style_avatar}` : "",
     "Elle porte {article}. Respecte exactement la couleur, la coupe, la matière et les détails, sans rien inventer ni ajouter de logo.",
     shop.taille ? `Taille portée : ${shop.taille}.` : "",
+    shop.tenue ? `Reste de la tenue (toujours le même) : ${shop.tenue}.` : "",
     `Décor : reproduis EXACTEMENT le décor de la photo du fond (mêmes murs, meubles, objets, lumière)${shop.style_fond ? ` : ${shop.style_fond}` : "."}`,
     `Sol : reproduis EXACTEMENT le sol de la photo du sol${shop.style_sol ? ` : ${shop.style_sol}` : "."}`,
     "Lumière naturelle, rendu authentique de photo de téléphone, légèrement imparfait, sans filtre, sans texte. Format portrait.",
