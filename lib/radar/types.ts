@@ -3,6 +3,7 @@ export type RadarParams = {
   categorie: string | null;
   budget_max: number | null;
   lien: string | null; // analyse d'un lien précis
+  prix: number | null; // prix affiché, tapé par l'utilisateur (mode lien)
 };
 
 export type RadarProduit = {
@@ -12,6 +13,8 @@ export type RadarProduit = {
   image: string | null;
   categorie: string;
   prix_achat: number;
+  /** page = prix lu sur la page ou tapé ; recherche = vu dans un résultat de recherche ; estime = prix habituel */
+  prix_source: "page" | "recherche" | "estime";
   revente_min: number;
   revente_max: number;
   revente_conseillee: number;

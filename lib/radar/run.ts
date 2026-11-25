@@ -9,6 +9,7 @@ import { admin, getOwnerId } from "@/lib/supabase/admin";
 import type { RadarParams, RadarProduit } from "./types";
 
 const DOMAINES = ["temu.com", "shein.com"];
+const VINTED = ["vinted.fr", "vinted.com", "vinted.be", "vinted.es", "vinted.it", "vinted.de", "vinted.co.uk"];
 
 const Produit = z.object({
   titre: z.string().describe("Nom court et clair du produit, en français"),
@@ -16,7 +17,10 @@ const Produit = z.object({
   lien: z.string().describe("URL exacte de la page produit, telle que trouvée dans les résultats"),
   image: z.string().nullable().describe("URL d'une image du produit si elle apparaît dans les résultats, sinon null"),
   categorie: z.string(),
-  prix_achat: z.number().describe("Prix affiché chez le fournisseur, en euros"),
+  prix_achat: z.number().describe("Prix d'achat en euros : celui vu dans les résultats si possible, sinon le prix habituel de ce produit sur la plateforme"),
+  prix_source: z
+    .enum(["page", "recherche", "estime"])
+    .describe("page = lu sur la page produit ; recherche = vu dans un résultat de recherche ; estime = prix habituel estimé"),
   revente_min: z.number().describe("Prix de revente bas réaliste sur Vinted, en euros"),
   revente_max: z.number().describe("Prix de revente haut réaliste sur Vinted, en euros"),
   revente_conseillee: z.number().describe("Prix de revente moyen conseillé sur Vinted, en euros"),
@@ -83,26 +87,29 @@ const sameProduct = (a: string, b: string) => {
 async function rechercher(p: RadarParams, ctx: { lignesShops: string; ventes: string }) {
   client ??= new Anthropic();
   const consigne = p.lien
-    ? `Analyse ce produit : ${p.lien}\nOuvre la page (web_fetch). Donne son nom, son prix exact, une image, et estime à combien il se revend sur Vinted.`
+    ? `Analyse ce produit : ${p.lien}\n${p.prix ? `Prix affiché (donné par la vendeuse) : ${p.prix} €.\n` : ""}Ouvre la page (web_fetch) ou cherche-le. Donne son nom, son prix, une image, et estime à combien il se revend sur Vinted.`
     : [
         "Trouve 8 produits à acheter sur Temu ou Shein pour les revendre sur Vinted en France avec une bonne marge.",
         p.categorie ? `Catégorie demandée : ${p.categorie}.` : "Vêtements et accessoires femme qui se revendent bien sur Vinted.",
         p.budget_max ? `Prix d'achat maximum : ${p.budget_max} €.` : "",
-        "Pour chaque produit : nom, lien exact de la page produit, prix affiché, image si visible, et prix de revente réaliste sur Vinted (bas, haut, moyen).",
+        "Cherche les pages produit sur temu.com et shein.com (ex. requêtes « site:temu.com sac femme », « shein robe pull »). Les pages Temu/Shein cachent souvent leurs prix : cherche le prix dans les extraits des résultats, dans des comparatifs ou bons plans ; à défaut, indique le prix habituel de ce type de produit sur la plateforme et précise-le.",
+        "Pour chaque produit : nom, lien exact de la page produit (temu.com ou shein.com), prix d'achat et sa source (page, résultat de recherche ou estimation), image si visible, et prix de revente réaliste sur Vinted (bas, haut, moyen).",
         "Privilégie : multiplicateur d'au moins ×2,5, produits tendance cette saison, faciles à photographier portés.",
       ]
         .filter(Boolean)
         .join("\n");
   const system = [
     "Tu aides une vendeuse Vinted (France) à trouver des produits à revendre.",
-    "Utilise uniquement des pages de temu.com ou shein.com. N'invente aucun lien ni aucun prix : ne cite que ce que tu as vu dans les résultats.",
+    "Les produits proposés doivent avoir un lien de page produit temu.com ou shein.com vu dans les résultats. N'invente aucun lien. Pour le prix d'achat, dis toujours s'il a été vu ou s'il est estimé.",
+    "Ne consulte jamais Vinted.",
     "Le prix de revente Vinted est une estimation : base-toi sur ta connaissance du marché de la seconde main et sur ses ventes réelles ci-dessous.",
     `Ses boutiques :\n${ctx.lignesShops || "(aucune)"}`,
     `Ses dernières ventes réelles :\n${ctx.ventes || "(pas encore de ventes)"}`,
   ].join("\n\n");
 
   const tools: Anthropic.Messages.ToolUnion[] = [
-    { type: "web_search_20260209", name: "web_search", max_uses: p.lien ? 2 : 8, allowed_domains: DOMAINES, user_location: { type: "approximate", country: "FR" } },
+    // Recherche ouverte (pour trouver les prix dans les extraits), jamais sur Vinted
+    { type: "web_search_20260209", name: "web_search", max_uses: p.lien ? 3 : 10, blocked_domains: VINTED, user_location: { type: "approximate", country: "FR" } },
     { type: "web_fetch_20260209", name: "web_fetch", max_uses: p.lien ? 2 : 4, allowed_domains: DOMAINES, max_content_tokens: 8000 },
   ];
   const messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: consigne }];
@@ -114,7 +121,7 @@ async function rechercher(p: RadarParams, ctx: { lignesShops: string; ventes: st
       max_tokens: 8000,
       system,
       tools,
-      output_config: { effort: "low" },
+      output_config: { effort: "medium" },
       messages,
     });
     if (r.stop_reason === "refusal") throw new Error("Claude a refusé cette recherche.");
@@ -136,7 +143,7 @@ async function structurer(texte: string, ctx: { lignesShops: string }) {
     messages: [
       {
         role: "user",
-        content: `Boutiques :\n${ctx.lignesShops}\n\nTransforme ce compte rendu de recherche en liste de produits. Ne garde que les produits avec un lien et un prix d'achat trouvés dans le texte.\n\n${texte}`,
+        content: `Boutiques :\n${ctx.lignesShops}\n\nTransforme ce compte rendu de recherche en liste de produits. Garde les produits qui ont un lien de page produit temu.com ou shein.com et un prix d'achat (vu ou estimé, en précisant prix_source).\n\n${texte}`,
       },
     ],
   });
@@ -162,10 +169,20 @@ export async function executerRecherche(id: string) {
     const res = await structurer(texte, ctx);
     // Anti-invention : on ne garde que les liens réellement vus par la recherche
     const produits: RadarProduit[] = res.produits
-      .filter((x) => [...urls].some((u) => sameProduct(u, x.lien)) && x.prix_achat > 0)
+      .filter(
+        (x) =>
+          [...urls].some((u) => sameProduct(u, x.lien)) &&
+          /^https:\/\/([a-z0-9-]+\.)*(temu|shein)\.com\//i.test(x.lien) &&
+          x.prix_achat > 0
+      )
       .map((x) => ({
         ...x,
+        // Prix tapé par l'utilisateur : il fait foi
+        ...(p.lien && p.prix && sameProduct(p.lien, x.lien) ? { prix_achat: p.prix, prix_source: "page" as const } : {}),
         image: x.image && /^https:\/\//.test(x.image) ? x.image : null,
+      }))
+      .map((x) => ({
+        ...x,
         marge: Math.round((x.revente_conseillee - x.prix_achat) * 100) / 100,
         multiplicateur: Math.round((x.revente_conseillee / x.prix_achat) * 10) / 10,
       }))

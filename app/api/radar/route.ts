@@ -16,12 +16,14 @@ export async function POST(req: Request) {
   if (lien && !/^https:\/\/([a-z0-9-]+\.)*(temu|shein)\.com\//i.test(lien))
     return Response.json({ error: "Le lien doit venir de temu.com ou shein.com." }, { status: 400 });
   const budget = Number(b.budget_max);
+  const prix = Number(b.prix);
   try {
     const id = await creerRecherche({
       shop_id: str(b.shop_id),
       categorie: str(b.categorie),
       budget_max: Number.isFinite(budget) && budget > 0 ? budget : null,
       lien,
+      prix: Number.isFinite(prix) && prix > 0 ? prix : null,
     });
     after(() => executerRecherche(id));
     return Response.json({ id });

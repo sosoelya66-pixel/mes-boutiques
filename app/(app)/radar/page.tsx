@@ -16,7 +16,7 @@ const CONF: Record<RadarProduit["confiance"], string> = {
 
 export default function RadarPage() {
   const { shops, shopId, shopById } = useAppState();
-  const [v, setV] = useState({ shop_id: shopId !== "all" ? shopId : "", categorie: "", budget: "", lien: "" });
+  const [v, setV] = useState({ shop_id: shopId !== "all" ? shopId : "", categorie: "", budget: "", lien: "", prix: "" });
   const [mode, setMode] = useState<"chercher" | "lien">("chercher");
   const [list, setList] = useState<RadarRecherche[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +50,7 @@ export default function RadarPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           mode === "lien"
-            ? { shop_id: v.shop_id || null, lien: v.lien }
+            ? { shop_id: v.shop_id || null, lien: v.lien, prix: parseFloat(v.prix.replace(",", ".")) }
             : { shop_id: v.shop_id || null, categorie: v.categorie, budget_max: parseFloat(v.budget.replace(",", ".")) }
         ),
       });
@@ -107,10 +107,16 @@ export default function RadarPage() {
               </label>
             </>
           ) : (
-            <label className="label sm:col-span-2">
-              Lien Temu ou Shein
-              <input className="input mt-1.5" placeholder="https://www.temu.com/…" value={v.lien} onChange={(e) => setV({ ...v, lien: e.target.value })} />
-            </label>
+            <>
+              <label className="label">
+                Lien Temu ou Shein
+                <input className="input mt-1.5" placeholder="https://www.temu.com/…" value={v.lien} onChange={(e) => setV({ ...v, lien: e.target.value })} />
+              </label>
+              <label className="label">
+                Prix affiché (€, conseillé)
+                <input className="input mt-1.5" inputMode="decimal" placeholder="ex. 8,90" value={v.prix} onChange={(e) => setV({ ...v, prix: e.target.value })} />
+              </label>
+            </>
           )}
         </div>
         {error && <p className="mt-3 text-sm text-alert">{error}</p>}
@@ -227,8 +233,11 @@ function ProduitCard({ p, onFiche }: { p: RadarProduit; onFiche: () => void }) {
         </div>
         <div className="mt-2 grid grid-cols-3 gap-2 text-center">
           <div className="rounded-lg bg-white/5 px-1 py-1.5">
-            <div className="text-[10px] text-muted">Achat</div>
-            <div className="text-sm font-semibold">{euros(p.prix_achat)}</div>
+            <div className="text-[10px] text-muted">Achat{p.prix_source === "estime" ? " (estimé)" : ""}</div>
+            <div className="text-sm font-semibold">
+              {p.prix_source !== "page" ? "≈ " : ""}
+              {euros(p.prix_achat)}
+            </div>
           </div>
           <div className="rounded-lg bg-white/5 px-1 py-1.5">
             <div className="text-[10px] text-muted">Revente moy.</div>
@@ -242,6 +251,9 @@ function ProduitCard({ p, onFiche }: { p: RadarProduit; onFiche: () => void }) {
         <div className="mt-1.5 text-[11px] text-muted">
           revente {euros(p.revente_min)} – {euros(p.revente_max)} · ×{p.multiplicateur.toLocaleString("fr-FR")}
         </div>
+        {p.prix_source !== "page" && (
+          <p className="mt-1 text-[11px] text-alert/90">Prix d&apos;achat à vérifier sur la page (Temu/Shein masquent leurs prix).</p>
+        )}
         <p className="mt-1.5 line-clamp-2 text-xs">{p.pourquoi}</p>
         {p.risques && <p className="mt-0.5 line-clamp-1 text-xs text-alert/90">⚠ {p.risques}</p>}
         <div className="mt-3 flex gap-2">
