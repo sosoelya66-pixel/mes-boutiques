@@ -2,8 +2,8 @@ import type { SaleStatus } from "@/lib/types";
 
 const STYLES: Record<SaleStatus, { label: string; cls: string }> = {
   a_envoyer: { label: "À envoyer", cls: "bg-alert/15 text-alert" },
-  envoye: { label: "Envoyé", cls: "bg-orders/15 text-orders" },
-  termine: { label: "Terminé", cls: "bg-profit/15 text-profit" },
+  envoye: { label: "En route", cls: "bg-orders/15 text-orders" },
+  termine: { label: "Terminée", cls: "bg-profit/15 text-profit" },
 };
 
 export function StatusBadge({ statut }: { statut: SaleStatus }) {

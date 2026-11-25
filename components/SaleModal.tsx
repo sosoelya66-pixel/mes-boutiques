@@ -98,6 +98,18 @@ export function SaleModal({ sale, onClose }: { sale: Sale; onClose: () => void }
             Marquer envoyé
           </button>
         )}
+        {sale.statut === "envoye" && (
+          <button
+            className="btn-primary col-span-2"
+            onClick={async () => {
+              await updateSale(sale.id, { statut: "termine" });
+              await refresh();
+              onClose();
+            }}
+          >
+            Marquer livré
+          </button>
+        )}
       </div>
     </Modal>
   );
