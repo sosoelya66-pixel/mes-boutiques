@@ -35,6 +35,8 @@ export type ApplyResult = {
   sale_id: string | null;
   statut: "traite" | "ignore" | "a_verifier";
   detail: string;
+  /** Renseigné quand une nouvelle vente vient d'être créée (pour la notification) */
+  nouvelleVente?: { titre: string; prix: number; boutique: string; prixConnu: boolean };
 };
 
 const ORDER: Record<SaleStatus, number> = { a_envoyer: 0, envoye: 1, termine: 2 };
@@ -199,5 +201,13 @@ export async function applyEmail(owner: string, meta: MailMeta, data: EmailData)
   }
 
   const what = created ? "vente créée" : Object.keys(patch).length ? `vente mise à jour (${Object.keys(patch).join(", ")})` : "rien à changer";
-  return { shop_id: shop.id, sale_id: sale.id, statut: "traite", detail: `${what} · boutique reconnue par ${found.how}. ${data.resume}` };
+  return {
+    shop_id: shop.id,
+    sale_id: sale.id,
+    statut: "traite",
+    detail: `${what} · boutique reconnue par ${found.how}. ${data.resume}`,
+    nouvelleVente: created
+      ? { titre: sale.titre, prix: Number(patch.prix ?? sale.prix), boutique: shop.nom, prixConnu: (patch.prix_source ?? sale.prix_source) !== "aucun" }
+      : undefined,
+  };
 }

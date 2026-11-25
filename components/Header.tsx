@@ -100,6 +100,7 @@ function BottomNav() {
               { href: "/compta", label: "Compta" },
               { href: "/analyses", label: "Analyses" },
               { href: "/boutiques", label: "Boutiques et synchro" },
+              { href: "/boutiques#notifications", label: "Notifications" },
             ].map((l) => (
               <Link key={l.href} href={l.href} className="block rounded-xl px-4 py-3.5 text-[15px] hover:bg-white/5">
                 {l.label}

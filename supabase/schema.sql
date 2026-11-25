@@ -153,3 +153,23 @@ create policy "proprio" on public.sync_state for select to authenticated using (
 grant select, update, delete on public.email_log to authenticated;
 grant select on public.sync_state to authenticated;
 grant select, insert, update, delete on public.email_log, public.sync_state to service_role;
+
+-- ============================================================
+-- Notifications (identique à correctif-5-notifications.sql)
+-- ============================================================
+create table if not exists public.push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null default auth.uid() references auth.users on delete cascade,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  appareil text,
+  created_at timestamptz not null default now()
+);
+alter table public.push_subscriptions enable row level security;
+drop policy if exists "proprio" on public.push_subscriptions;
+create policy "proprio" on public.push_subscriptions for select to authenticated using (owner_id = auth.uid());
+grant select on public.push_subscriptions to authenticated;
+grant select, insert, update, delete on public.push_subscriptions to service_role;
+
+alter table public.sync_state add column if not exists derniere_relance date;

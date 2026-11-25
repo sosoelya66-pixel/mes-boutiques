@@ -4,7 +4,8 @@ import "server-only";
 import { ImapFlow } from "imapflow";
 import { simpleParser, type AddressObject, type ParsedMail } from "mailparser";
 import { admin, getOwnerId } from "@/lib/supabase/admin";
-import { applyEmail, type MailMeta } from "./apply";
+import { sendPush } from "@/lib/push";
+import { applyEmail, type ApplyResult, type MailMeta } from "./apply";
 import { extractEmail } from "./extract";
 
 const BATCH = 15; // e-mails traités au maximum par passage
@@ -90,6 +91,7 @@ export async function runSync(): Promise<SyncSummary> {
   let lastUid = Number(state?.last_uid ?? 0);
   let uidValidity = state?.uidvalidity != null ? Number(state.uidvalidity) : null;
   let fatal: string | null = null;
+  const newSales: NonNullable<ApplyResult["nouvelleVente"]>[] = [];
 
   try {
     await client.connect();
@@ -164,6 +166,7 @@ export async function runSync(): Promise<SyncSummary> {
           const r = await applyEmail(owner, meta, data);
           await db.from("email_log").insert({ ...log, shop_id: r.shop_id, sale_id: r.sale_id, statut: r.statut, detail: r.detail });
           sum[r.statut === "traite" ? "traites" : r.statut === "ignore" ? "ignores" : "a_verifier"]++;
+          if (r.nouvelleVente) newSales.push(r.nouvelleVente);
         } catch (e) {
           await db.from("email_log").insert({ ...log, statut: "erreur", detail: (e as Error).message });
           sum.erreurs++;
@@ -192,6 +195,27 @@ export async function runSync(): Promise<SyncSummary> {
     en_cours_depuis: null,
   });
   await db.from("shops").update({ derniere_synchro: now }).eq("owner_id", owner);
+
+  // Notification sur le téléphone pour chaque nouvelle vente (regroupées au-delà de 3)
+  try {
+    const eur = (n: number) => n.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+    if (newSales.length > 3) {
+      await sendPush({
+        title: `💰 ${newSales.length} nouvelles ventes`,
+        body: newSales.map((v) => v.titre).slice(0, 4).join(" · "),
+        url: "/aujourdhui",
+      });
+    } else {
+      for (const v of newSales)
+        await sendPush({
+          title: `💰 Vendu sur ${v.boutique}`,
+          body: `${v.titre}${v.prixConnu ? ` · ${eur(v.prix)}` : ""}`,
+          url: "/aujourdhui",
+        });
+    }
+  } catch {
+    // Notifications non configurées : la synchro reste valable
+  }
 
   sum.message = fatal
     ? `Erreur : ${fatal}`
