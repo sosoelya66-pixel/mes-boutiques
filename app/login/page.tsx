@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BRAND } from "@/lib/brand";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/lib/supabase/client";
 
@@ -32,10 +33,10 @@ export default function LoginPage() {
         className="pointer-events-none absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-25 blur-3xl"
         style={{ background: "radial-gradient(circle, #8b7cf6 0%, #4d8af0 35%, #4fd18b 60%, transparent 70%)" }}
       />
-      <form onSubmit={submit} className="rise relative w-full max-w-sm rounded-2xl border border-line bg-card/90 p-7 backdrop-blur">
+      <form onSubmit={submit} className="rise relative w-full max-w-sm rounded-2xl glass/90 p-7 backdrop-blur">
         <Logo size={48} />
-        <h1 className="mt-5 text-2xl font-bold">Mes boutiques</h1>
-        <p className="mt-1 text-sm text-muted">Toutes tes boutiques Vinted, au même endroit.</p>
+        <h1 className="mt-5 text-2xl font-bold">{BRAND.name}</h1>
+        <p className="mt-1 text-sm text-muted">{BRAND.tagline}</p>
         <label className="mt-6 block text-sm text-muted">
           E-mail
           <input

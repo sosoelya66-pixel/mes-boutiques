@@ -67,7 +67,7 @@ export function SyncPanel() {
   const sale = allSales.find((s) => s.id === openSale);
 
   return (
-    <section className="rounded-2xl border border-line bg-card p-5 sm:p-6">
+    <section className="rounded-2xl glass p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-[15px] font-semibold">Synchro e-mails Vinted</h2>

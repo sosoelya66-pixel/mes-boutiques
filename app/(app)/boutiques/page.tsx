@@ -46,14 +46,14 @@ export default function BoutiquesPage() {
       </button>
 
       {ready && active.length === 0 && (
-        <p className="rounded-2xl border border-line bg-card p-8 text-center text-sm text-muted">
+        <p className="rounded-2xl glass p-8 text-center text-sm text-muted">
           Aucune boutique pour l&apos;instant.
         </p>
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
         {active.map((s) => (
-          <section key={s.id} className="rounded-2xl border border-line bg-card p-5 sm:p-6">
+          <section key={s.id} className="rounded-2xl glass p-5 sm:p-6">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
                 <Dot color={s.couleur} size={14} />

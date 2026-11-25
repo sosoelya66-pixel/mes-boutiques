@@ -97,7 +97,7 @@ export function NotificationsCard() {
   }
 
   return (
-    <section id="notifications" className="rise rounded-2xl border border-line bg-card p-5 sm:p-6">
+    <section id="notifications" className="rise rounded-2xl glass p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="max-w-xl">
           <h2 className="text-[15px] font-semibold">🔔 Notifications</h2>

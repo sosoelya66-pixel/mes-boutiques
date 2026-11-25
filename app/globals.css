@@ -20,6 +20,19 @@ body {
   color: #fff;
 }
 
+/* Halos de couleur fixes derrière l'appli (look premium) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(700px 420px at 8% -8%, rgba(139, 124, 246, 0.18), transparent 70%),
+    radial-gradient(620px 380px at 100% 0%, rgba(77, 138, 240, 0.14), transparent 70%),
+    radial-gradient(700px 480px at 50% 110%, rgba(79, 209, 139, 0.10), transparent 70%);
+}
+
 body {
   -webkit-font-smoothing: antialiased;
   font-variant-numeric: tabular-nums;
@@ -41,7 +54,9 @@ body {
     @apply inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-card px-3.5 py-2 text-sm font-medium text-white transition-colors hover:border-white/25 disabled:opacity-50;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-night transition-opacity hover:opacity-90 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all hover:brightness-110 disabled:opacity-50;
+    background: linear-gradient(135deg, #8b7cf6 0%, #4d8af0 100%);
+    box-shadow: 0 6px 20px -6px rgba(139, 124, 246, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
   .btn-danger {
     @apply inline-flex items-center justify-center gap-2 rounded-xl border border-alert/40 px-3.5 py-2 text-sm font-medium text-alert hover:bg-alert/10;
@@ -63,4 +78,48 @@ body {
 .rise { animation: rise 0.35s ease-out both; }
 @media (prefers-reduced-motion: reduce) {
   .rise { animation: none; }
+}
+
+/* Cartes en verre dépoli avec un reflet en haut */
+.glass {
+  background: linear-gradient(180deg, rgba(37, 39, 64, 0.72) 0%, rgba(25, 26, 43, 0.72) 100%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Halo coloré dans le coin d'une carte (couleur via --glow) */
+.glow-corner { position: relative; overflow: hidden; }
+.glow-corner::after {
+  content: "";
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 200px;
+  height: 200px;
+  border-radius: 9999px;
+  background: var(--glow, #8b7cf6);
+  opacity: 0.16;
+  filter: blur(50px);
+  pointer-events: none;
+}
+
+/* Chiffres lumineux */
+.text-glow { text-shadow: 0 0 28px currentColor; }
+
+/* Ligne lumineuse sous l'onglet actif */
+.tab-active-line {
+  background: linear-gradient(90deg, #8b7cf6, #4d8af0, #4fd18b);
+  box-shadow: 0 0 12px rgba(139, 124, 246, 0.8);
+}
+
+/* Courbes des graphiques qui brillent */
+.chart-glow .recharts-area-curve { filter: drop-shadow(0 0 6px currentColor); }
+
+/* Pastille active (périodes, filtres) */
+.pill-active {
+  border-color: transparent !important;
+  background: linear-gradient(135deg, rgba(139, 124, 246, 0.9), rgba(77, 138, 240, 0.9));
+  box-shadow: 0 4px 16px -4px rgba(139, 124, 246, 0.7);
 }

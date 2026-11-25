@@ -23,11 +23,11 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-4"
       onMouseDown={onClose}
     >
       <div
-        className={`max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-line bg-card p-6 sm:rounded-2xl ${
+        className={`rise max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-white/10 bg-[#1b1c2e]/95 p-6 shadow-2xl shadow-black/50 backdrop-blur-xl sm:rounded-2xl ${
           wide ? "max-w-2xl" : "max-w-md"
         }`}
         onMouseDown={(e) => e.stopPropagation()}

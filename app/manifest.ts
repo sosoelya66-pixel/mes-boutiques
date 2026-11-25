@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
+import { BRAND } from "@/lib/brand";
 
 // Permet d'installer l'appli sur l'écran d'accueil (iPhone : Partager → Sur l'écran d'accueil)
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Mes boutiques",
-    short_name: "Boutiques",
+    name: BRAND.name,
+    short_name: BRAND.short,
     description: "Tableau de bord de mes boutiques Vinted",
     start_url: "/aujourdhui",
     display: "standalone",

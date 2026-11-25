@@ -81,7 +81,7 @@ export function ListingsPage() {
               key={x.value}
               onClick={() => setStatut(x.value)}
               className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium ${
-                statut === x.value ? "border-white bg-white text-night" : "border-line bg-card text-muted hover:text-white"
+                statut === x.value ? "pill-active text-white" : "border-line bg-card text-muted hover:text-white"
               }`}
             >
               {x.label}
@@ -93,7 +93,7 @@ export function ListingsPage() {
       {!ready ? (
         <p className="p-8 text-center text-sm text-muted">Chargement…</p>
       ) : list.length === 0 ? (
-        <p className="rounded-2xl border border-line bg-card p-8 text-center text-sm text-muted">Aucune fiche.</p>
+        <p className="rounded-2xl glass p-8 text-center text-sm text-muted">Aucune fiche.</p>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
           {list.map((l) => {
@@ -102,7 +102,7 @@ export function ListingsPage() {
               <button
                 key={l.id}
                 onClick={() => setOpenId(l.id)}
-                className="overflow-hidden rounded-2xl border border-line bg-card text-left transition-colors hover:border-white/20"
+                className="overflow-hidden rounded-2xl glass text-left transition-colors hover:border-white/20"
               >
                 <div className="relative aspect-[4/5] bg-line">
                   {l.photos[0] && <img src={l.photos[0]} alt="" className="h-full w-full object-cover" />}

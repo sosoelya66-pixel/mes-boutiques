@@ -226,9 +226,9 @@ function greeting(d: Date) {
 
 function Stat({ label, value, cls }: { label: string; value: string; cls: string }) {
   return (
-    <div className="rounded-2xl border border-line bg-card p-3 sm:p-5">
+    <div className="rounded-2xl glass p-3 sm:p-5">
       <div className="text-[11px] text-muted sm:text-sm">{label}</div>
-      <div className={`mt-1 truncate text-lg font-bold sm:text-3xl ${cls}`}>{value}</div>
+      <div className={`text-glow mt-1 truncate text-lg font-bold sm:text-3xl ${cls}`}>{value}</div>
     </div>
   );
 }
@@ -245,7 +245,7 @@ function Block({
   children: React.ReactNode;
 }) {
   return (
-    <section className={`rise rounded-2xl border bg-card p-4 sm:p-5 ${tone === "alert" ? "border-alert/30" : "border-line"}`}>
+    <section className={`rise glass rounded-2xl p-4 sm:p-5 ${tone === "alert" ? "!border-alert/40" : ""}`}>
       <div className="mb-2 flex items-center justify-between gap-3">
         <h3 className={`text-[15px] font-semibold ${tone === "alert" ? "text-alert" : ""}`}>{title}</h3>
         {action}

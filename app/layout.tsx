@@ -1,14 +1,15 @@
 import type { Metadata, Viewport } from "next";
+import { BRAND } from "@/lib/brand";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Mes boutiques",
-  description: "Tableau de bord de mes boutiques Vinted",
-  applicationName: "Mes boutiques",
-  appleWebApp: { capable: true, title: "Boutiques", statusBarStyle: "black-translucent" },
+  title: BRAND.name,
+  description: BRAND.tagline,
+  applicationName: BRAND.name,
+  appleWebApp: { capable: true, title: BRAND.short, statusBarStyle: "black-translucent" },
   icons: {
     icon: [{ url: "/favicon-32.png", sizes: "32x32" }, { url: "/icon-192.png", sizes: "192x192" }],
     apple: "/apple-touch-icon.png",

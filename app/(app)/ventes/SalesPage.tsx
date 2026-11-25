@@ -118,7 +118,7 @@ export function SalesPage() {
             key={x.value}
             onClick={() => setStatut(x.value)}
             className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium ${
-              statut === x.value ? "border-white bg-white text-night" : "border-line bg-card text-muted hover:text-white"
+              statut === x.value ? "pill-active text-white" : "border-line bg-card text-muted hover:text-white"
             }`}
           >
             {x.label}
@@ -145,7 +145,7 @@ export function SalesPage() {
       </div>
 
       {/* Liste */}
-      <div className="rounded-2xl border border-line bg-card">
+      <div className="rounded-2xl glass">
         {!ready ? (
           <p className="p-8 text-center text-sm text-muted">Chargement…</p>
         ) : list.length === 0 ? (

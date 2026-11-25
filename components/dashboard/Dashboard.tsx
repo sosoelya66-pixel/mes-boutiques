@@ -43,7 +43,7 @@ export function Dashboard() {
   if (error) return <ErrorBox message={error} />;
   if (ready && shops.length === 0)
     return (
-      <div className="rounded-2xl border border-line bg-card p-8 text-center">
+      <div className="rounded-2xl glass p-8 text-center">
         <h2 className="text-lg font-semibold">Bienvenue 👋</h2>
         <p className="mt-2 text-sm text-muted">Commence par ajouter ta première boutique Vinted.</p>
         <Link href="/boutiques" className="btn-primary mt-5">
@@ -62,7 +62,7 @@ export function Dashboard() {
             onClick={() => setPeriodKey(x.key)}
             className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
               periodKey === x.key
-                ? "border-white bg-white text-night"
+                ? "pill-active text-white"
                 : "border-line bg-card text-muted hover:border-white/25 hover:text-white"
             }`}
           >
@@ -79,7 +79,8 @@ export function Dashboard() {
           <div className="rise grid gap-4 md:grid-cols-3 sm:gap-5">
             <KpiCard
               label="Bénéfice"
-              value={euros(view.cur.benefice)}
+              amount={view.cur.benefice}
+              format={euros}
               valueClass="text-profit"
               evolution={evolution(view.cur.benefice, view.prev.benefice)}
               sub={`achats ${euros(view.cur.achats)} · frais ${euros(view.cur.frais)}`}
@@ -89,7 +90,8 @@ export function Dashboard() {
             />
             <KpiCard
               label="Chiffre d'affaires"
-              value={euros(view.cur.ca)}
+              amount={view.cur.ca}
+              format={euros}
               valueClass="text-white"
               evolution={evolution(view.cur.ca, view.prev.ca)}
               sub={`panier moyen ${euros(view.cur.panierMoyen)}`}
@@ -99,7 +101,8 @@ export function Dashboard() {
             />
             <KpiCard
               label="Commandes"
-              value={String(view.cur.commandes)}
+              amount={view.cur.commandes}
+              format={(n) => String(Math.round(n))}
               valueClass="text-white"
               evolution={evolution(view.cur.commandes, view.prev.commandes)}
               data={view.points}

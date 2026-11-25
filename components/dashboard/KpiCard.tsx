@@ -2,6 +2,7 @@
 
 import { Area, AreaChart, ResponsiveContainer, YAxis } from "recharts";
 import { pourcent } from "@/lib/format";
+import { useCountUp } from "@/lib/useCountUp";
 
 export function Evolution({ value }: { value: number | null }) {
   if (value === null) return <span className="text-muted">nouveau</span>;
@@ -16,7 +17,8 @@ export function Evolution({ value }: { value: number | null }) {
 
 export function KpiCard({
   label,
-  value,
+  amount,
+  format,
   valueClass,
   evolution,
   sub,
@@ -25,7 +27,8 @@ export function KpiCard({
   color,
 }: {
   label: string;
-  value: string;
+  amount: number;
+  format: (n: number) => string;
   valueClass: string;
   evolution: number | null;
   sub?: React.ReactNode;
@@ -34,15 +37,16 @@ export function KpiCard({
   color: string;
 }) {
   const id = `spark-${dataKey}`;
+  const shown = useCountUp(amount);
   return (
-    <section className="flex flex-col rounded-2xl border border-line bg-card p-5 sm:p-6">
+    <section className="glow-corner flex flex-col rounded-2xl glass p-5 sm:p-6" style={{ ["--glow" as string]: color }}>
       <div className="text-sm font-medium text-muted">{label}</div>
-      <div className={`mt-2 text-[40px] font-bold leading-none tracking-tight ${valueClass}`}>{value}</div>
+      <div className={`text-glow mt-2 text-[40px] font-bold leading-none tracking-tight ${valueClass}`}>{format(shown)}</div>
       <div className="mt-3 text-sm text-muted">
         <Evolution value={evolution} /> vs la période d&apos;avant, même heure
       </div>
       {sub && <div className="mt-1 text-sm text-muted">{sub}</div>}
-      <div className="mt-4 h-12 -mx-1">
+      <div className="chart-glow mt-4 h-12 -mx-1" style={{ color }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
             <defs>

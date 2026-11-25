@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BRAND } from "@/lib/brand";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { runSyncNow } from "@/lib/data";
@@ -26,7 +27,7 @@ export function Header() {
       <div className="flex items-center justify-between gap-3">
         <Link href="/aujourdhui" className="flex min-w-0 items-center gap-2.5">
           <Logo size={34} />
-          <h1 className="truncate text-xl font-bold tracking-tight sm:text-[28px]">Mes boutiques</h1>
+          <h1 className="truncate text-xl font-bold tracking-tight sm:text-[28px]">{BRAND.name}</h1>
         </Link>
         <div className="flex items-center gap-2">
           <SyncButton />
@@ -42,11 +43,12 @@ export function Header() {
           <Link
             key={t.href}
             href={t.href}
-            className={`-mb-px shrink-0 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
-              isActive(pathname, t.href) ? "border-white text-white" : "border-transparent text-muted hover:text-white"
+            className={`relative -mb-px shrink-0 px-3 py-2.5 text-sm font-medium transition-colors ${
+              isActive(pathname, t.href) ? "text-white" : "text-muted hover:text-white"
             }`}
           >
             {t.label}
+            {isActive(pathname, t.href) && <span className="tab-active-line absolute inset-x-2 -bottom-px h-[3px] rounded-full" />}
           </Link>
         ))}
       </nav>
@@ -113,7 +115,7 @@ function BottomNav() {
           </div>
         </div>
       )}
-      <nav className="pb-safe fixed inset-x-0 bottom-0 z-50 border-t border-line bg-night/95 backdrop-blur md:hidden">
+      <nav className="pb-safe fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#12131f]/75 backdrop-blur-xl md:hidden">
         <div className="grid grid-cols-5">
           {items.map((it) => {
             const active = isActive(pathname, it.href);
@@ -125,7 +127,9 @@ function BottomNav() {
                   active ? "text-white" : "text-muted"
                 }`}
               >
-                <Icon name={it.icon} />
+                <span className={active ? "drop-shadow-[0_0_8px_rgba(139,124,246,0.9)]" : ""}>
+                  <Icon name={it.icon} />
+                </span>
                 {it.label}
                 {!!it.badge && (
                   <span className="absolute left-1/2 top-1.5 ml-2 min-w-[18px] rounded-full bg-alert px-1 text-center text-[10px] font-bold leading-[18px] text-night">

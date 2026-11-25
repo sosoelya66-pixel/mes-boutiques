@@ -147,7 +147,7 @@ export default function AnalysesPage() {
             key={p.key}
             onClick={() => setDays(p.key)}
             className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium ${
-              days === p.key ? "border-white bg-white text-night" : "border-line bg-card text-muted hover:text-white"
+              days === p.key ? "pill-active text-white" : "border-line bg-card text-muted hover:text-white"
             }`}
           >
             {p.label}
@@ -176,12 +176,12 @@ export default function AnalysesPage() {
         }
       >
         <div className="flex items-baseline justify-between gap-3">
-          <span className="text-[32px] font-bold leading-none text-profit">{euros(a.monthProfit)}</span>
+          <span className="text-glow text-[32px] font-bold leading-none text-profit">{euros(a.monthProfit)}</span>
           {goal > 0 && <span className="text-sm text-muted">{pct(goalPct)} de {euros(goal)}</span>}
         </div>
         {goal > 0 && (
           <div className="mt-3 h-2.5 rounded-full bg-line">
-            <div className="h-2.5 rounded-full bg-profit transition-all" style={{ width: `${goalPct}%` }} />
+            <div className="h-2.5 rounded-full transition-all" style={{ width: `${goalPct}%`, background: "linear-gradient(90deg,#4d8af0,#4fd18b)", boxShadow: "0 0 14px rgba(79,209,139,.6)" }} />
           </div>
         )}
         <p className="mt-3 text-sm text-muted">
@@ -306,9 +306,9 @@ export default function AnalysesPage() {
 
 function Kpi({ label, value, hint, cls }: { label: string; value: string; hint: string; cls: string }) {
   return (
-    <div className="rounded-2xl border border-line bg-card p-4 sm:p-5">
+    <div className="rounded-2xl glass p-4 sm:p-5">
       <div className="text-xs text-muted sm:text-sm">{label}</div>
-      <div className={`mt-1.5 text-2xl font-bold sm:text-3xl ${cls}`}>{value}</div>
+      <div className={`text-glow mt-1.5 text-2xl font-bold sm:text-3xl ${cls}`}>{value}</div>
       <div className="mt-1 text-xs text-muted">{hint}</div>
     </div>
   );
