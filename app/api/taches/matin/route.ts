@@ -2,7 +2,7 @@
 import { bearerOk } from "@/lib/auth-server";
 import { sendPush } from "@/lib/push";
 import { admin, getOwnerId } from "@/lib/supabase/admin";
-import { buildTaches, jourParis } from "@/lib/taches";
+import { buildTaches, jourParis, type Tache } from "@/lib/taches";
 import type { Listing, Sale, Shop } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -35,7 +35,13 @@ export async function POST(req: Request) {
     const sales = salesRaw.map((s) => ({ ...s, prix: Number(s.prix), prix_achat: Number(s.prix_achat), frais: Number(s.frais) }));
     const listings = listingsRaw.map((l) => ({ ...l, prix: Number(l.prix), prix_achat: Number(l.prix_achat) }));
     const jour = jourParis();
+    const { data: hier } = await db
+      .from("taches")
+      .select("*")
+      .eq("owner_id", owner)
+      .eq("jour", jourParis(new Date(Date.now() - 86400000)));
     const list = buildTaches({
+      hier: (hier ?? []) as Tache[],
       shops: shops.filter((s) => s.actif),
       sales,
       listings,
@@ -53,7 +59,7 @@ export async function POST(req: Request) {
     if (heureParis === 8 || new URL(req.url).searchParams.get("notifier") === "1")
       await sendPush({
       title: `📋 Tes ${n} tâche${n > 1 ? "s" : ""} du jour`,
-      body: list.slice(0, 3).map((t) => t.titre).join(" · "),
+      body: list.filter((t) => t.type === "creer").map((t) => t.titre).slice(0, 3).join(" · ") || list.slice(0, 3).map((t) => t.titre).join(" · "),
       url: "/aujourdhui",
       tag: `taches-${jour}`,
     }).catch(() => 0);

@@ -21,6 +21,8 @@ export type Tache = {
 export type TacheInput = Pick<Tache, "cle" | "type" | "titre" | "detail" | "lien" | "ordre">;
 
 type Data = {
+  /** Tâches de la veille (pour reporter ce qui n'a pas été fait) */
+  hier?: Tache[];
   shops: Shop[];
   sales: Sale[];
   listings: Listing[];
@@ -61,22 +63,11 @@ const DEFIS: { titre: string; detail: string | null; lien: string | null }[] = [
   { titre: "Compare tes boutiques", detail: "Analyses → comparaison : laquelle a besoin d'un coup de pouce ?", lien: "/analyses" },
 ];
 
-/** Nombre pseudo-aléatoire stable pour une date (même tirage toute la journée). */
-function graine(jour: string) {
-  let h = 2166136261;
-  for (const c of jour) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
-  return () => {
-    h = Math.imul(h ^ (h >>> 15), 2246822507);
-    h = Math.imul(h ^ (h >>> 13), 3266489909);
-    return ((h ^= h >>> 16) >>> 0) / 4294967296;
-  };
-}
 const numeroJour = (now: Date) => Math.floor(new Date(now.toLocaleString("en-US", { timeZone: "Europe/Paris" })).getTime() / DAY);
 
 /** Construit la liste des tâches du jour. */
 export function buildTaches(d: Data, now = new Date()): TacheInput[] {
   const t: TacheInput[] = [];
-  const rand = graine(jourParis(now));
   const shopName = (id: string | null) => d.shops.find((s) => s.id === id)?.nom ?? "";
 
   // 1. Colis à envoyer (les plus anciens d'abord)
@@ -89,8 +80,10 @@ export function buildTaches(d: Data, now = new Date()): TacheInput[] {
       t.push({
         cle: `colis:${s.id}`,
         type: "colis",
-        titre: `Envoyer le colis : ${s.titre}`,
-        detail: `${shopName(s.shop_id)}${s.acheteur ? ` · @${s.acheteur}` : ""}${jours >= 2 ? ` · vendu il y a ${jours} jours` : ""}${s.bordereau_url ? "" : " · bordereau manquant"}`,
+        titre: `${shopName(s.shop_id)} : Envoyer « ${s.titre} »`,
+        detail: [s.acheteur ? `@${s.acheteur}` : null, jours >= 2 ? `vendu il y a ${jours} jours` : null, s.bordereau_url ? null : "bordereau manquant"]
+          .filter(Boolean)
+          .join(" · ") || null,
         lien: "/aujourdhui",
         ordre: 10 + i,
       });
@@ -113,40 +106,80 @@ export function buildTaches(d: Data, now = new Date()): TacheInput[] {
     .filter((l) => l.statut === "brouillon" && !(l.generation?.statut === "en_cours"))
     .slice(0, 5)
     .forEach((l, i) =>
-      t.push({ cle: `publier:${l.id}`, type: "publier", titre: `Publier la fiche : ${l.titre}`, detail: `sur ${shopName(l.shop_id)}`, lien: `/fiches?fiche=${l.id}`, ordre: 40 + i })
+      t.push({ cle: `publier:${l.id}`, type: "publier", titre: `${shopName(l.shop_id)} : Publier « ${l.titre} »`, detail: "Idéalement entre 18 h et 21 h", lien: `/fiches?fiche=${l.id}`, ordre: 40 + i })
     );
 
-  // 5. Objectif du mois : combien de fiches créer aujourd'hui
+  // 5. Plan boutique par boutique (s'adapte à ce que tu as réellement fait)
   const f = forecastMonth(d.sales, now);
   const manque = d.objectifGlobal ? d.objectifGlobal - f.benefice.prevu : 0;
-  const best = d.shops
-    .map((s) => ({ s, r: shopRates(d.sales.filter((x) => x.shop_id === s.id), d.listings.filter((x) => x.shop_id === s.id), now) }))
-    .filter((c) => c.r.ventes >= 5 && c.r.beneficeMoyen && c.r.tauxVente)
+  const today0 = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Paris" }));
+  today0.setHours(0, 0, 0, 0);
+  const hierDebut = today0.getTime() - DAY;
+  const plans = d.shops.map((shop) => {
+    const fiches = d.listings.filter((l) => l.shop_id === shop.id);
+    const ventes = d.sales.filter((x) => x.shop_id === shop.id);
+    const creees7 = fiches.filter((l) => now.getTime() - new Date(l.created_at).getTime() <= 7 * DAY).length;
+    const creeesHier = fiches.filter((l) => {
+      const t0 = new Date(l.created_at).getTime();
+      return t0 >= hierDebut && t0 < today0.getTime();
+    }).length;
+    const enLigne = fiches.filter((l) => l.statut === "en_ligne").length;
+    const derniereVente = ventes.reduce((m, x) => Math.max(m, new Date(x.date_vente).getTime()), 0);
+    const r = shopRates(ventes, fiches, now);
+    // Rythme : moyenne des 7 derniers jours + 1, monte si l'objectif d'hier a été tenu
+    const rythme = Math.round(creees7 / 7);
+    const cibleHier = Number(d.hier?.find((x) => x.cle === `fiches:${shop.id}`)?.titre.match(/Créer (\d+)/)?.[1] ?? 0);
+    let n = Math.max(2, rythme + 1);
+    if (cibleHier) n = creeesHier >= cibleHier ? cibleHier + 1 : Math.max(2, cibleHier - 1);
+    if (!cibleHier && enLigne < 10) n += 1; // premier jour et peu d'annonces en ligne : on accélère
+    return { shop, n: Math.min(n, 6), enLigne, creeesHier, cibleHier, derniereVente, r };
+  });
+  // L'objectif du mois donne +1 fiche à la boutique où une fiche rapporte le plus
+  const best = plans
+    .filter((p) => p.r.ventes >= 5 && p.r.beneficeMoyen && p.r.tauxVente)
     .sort((a, b) => b.r.beneficeMoyen! * b.r.tauxVente! - a.r.beneficeMoyen! * a.r.tauxVente!)[0];
-  if (manque > 0 && best && f.joursRestants > 0) {
-    const fichesMois = Math.ceil(manque / best.r.beneficeMoyen! / best.r.tauxVente!);
-    const parJour = Math.max(1, Math.ceil(fichesMois / f.joursRestants));
+  if (manque > 0 && best) best.n = Math.min(best.n + 1, 7);
+
+  plans.forEach((p, i) => {
+    const bilan = p.cibleHier
+      ? p.creeesHier >= p.cibleHier
+        ? `Hier : ${p.creeesHier}/${p.cibleHier} ✓, on monte d'un cran.`
+        : `Hier : ${p.creeesHier}/${p.cibleHier}, objectif ajusté.`
+      : null;
     t.push({
-      cle: "creer",
+      cle: `fiches:${p.shop.id}`,
       type: "creer",
-      titre: `Créer ${parJour} fiche${parJour > 1 ? "s" : ""} sur ${best.s.nom}`,
-      detail: `Il manque ~${eur(manque)} pour l'objectif du mois.`,
+      titre: `${p.shop.nom} : Créer ${p.n} fiche${p.n > 1 ? "s" : ""}`,
+      detail: [bilan, `${p.enLigne} annonce${p.enLigne > 1 ? "s" : ""} en ligne`, best === p && manque > 0 ? `il manque ~${eur(manque)} pour l'objectif` : null]
+        .filter(Boolean)
+        .join(" · "),
       lien: "/fiches",
-      ordre: 50,
+      ordre: 50 + i,
     });
-  } else {
-    // Boutique du jour : chacune son tour ; nombre de fiches variable (2 à 5)
-    const shop = d.shops.length ? d.shops[numeroJour(now) % d.shops.length] : null;
-    const n = 2 + Math.floor(rand() * 4);
-    t.push({
-      cle: "creer",
-      type: "creer",
-      titre: `Créer ${n} fiches${shop ? ` sur ${shop.nom}` : ""}`,
-      detail: shop ? "Boutique du jour : demain ce sera une autre." : "Plus d'annonces en ligne = plus de ventes.",
-      lien: "/fiches",
-      ordre: 50,
-    });
-  }
+    // Carte d'identité incomplète : les photos ne seront pas cohérentes
+    const photos = [p.shop.avatar_url, p.shop.fond_url, p.shop.sol_url].filter(Boolean).length;
+    if (photos < 3)
+      t.push({
+        cle: `carte:${p.shop.id}`,
+        type: "boutique",
+        titre: `${p.shop.nom} : Compléter la carte d'identité`,
+        detail: `${photos}/3 photos de référence (avatar, fond, sol)`,
+        lien: "/boutiques",
+        ordre: 55 + i,
+      });
+    if (!p.shop.alias_email)
+      t.push({ cle: `alias:${p.shop.id}`, type: "boutique", titre: `${p.shop.nom} : Ajouter l'alias e-mail`, detail: "Sinon ses ventes ne seront pas reconnues.", lien: "/boutiques", ordre: 56 + i });
+    // Aucune vente depuis 7 jours alors qu'il y a des annonces : on relance
+    if (p.enLigne >= 3 && (!p.derniereVente || now.getTime() - p.derniereVente > 7 * DAY))
+      t.push({
+        cle: `relance-boutique:${p.shop.id}`,
+        type: "relancer",
+        titre: `${p.shop.nom} : Baisser 3 annonces de 10 %`,
+        detail: p.derniereVente ? `Aucune vente depuis ${Math.floor((now.getTime() - p.derniereVente) / DAY)} jours.` : "Pas encore de vente : relance la visibilité.",
+        lien: "/fiches",
+        ordre: 58 + i,
+      });
+  });
 
   // 6. Annonces qui dorment (les 2 plus anciennes, plus de 21 jours)
   d.listings
@@ -160,7 +193,7 @@ export function buildTaches(d: Data, now = new Date()): TacheInput[] {
       t.push({
         cle: `relancer:${l.id}`,
         type: "relancer",
-        titre: `Relancer : ${l.titre}`,
+        titre: `${shopName(l.shop_id)} : Relancer « ${l.titre} »`,
         detail: `En ligne depuis ${jours} jours · passe de ${eur(l.prix)} à ${eur(nouveau)} ou refais la 1re photo`,
         lien: `/fiches?fiche=${l.id}`,
         ordre: 60 + i,
@@ -183,7 +216,21 @@ export function buildTaches(d: Data, now = new Date()): TacheInput[] {
     t.push({ cle: `defi:${defi.titre}`, type: "defi", titre: defi.titre, detail: defi.detail, lien: defi.lien, ordre: 90 + k });
   }
 
+  // 9. Reports : ce qui n'a pas été fait hier (tâches perso et défis) revient aujourd'hui
+  for (const h of d.hier ?? []) {
+    if (h.fait || t.some((x) => x.cle === h.cle)) continue;
+    if (h.type === "perso" || (h.type === "defi" && !h.detail?.startsWith("↩")))
+      t.push({ cle: h.cle, type: h.type, titre: h.titre, detail: `↩ reportée d'hier${h.detail ? ` · ${h.detail}` : ""}`, lien: h.lien, ordre: h.ordre });
+  }
+
   return t;
+}
+
+/** Moment de la journée conseillé pour une tâche */
+export function moment(type: string): "matin" | "journee" | "soir" {
+  if (["colis", "prix", "emails", "suivi"].includes(type)) return "matin";
+  if (["publier", "defi"].includes(type)) return "soir";
+  return "journee";
 }
 
 /** La tâche est-elle faite d'après les données ? (cochage automatique) */

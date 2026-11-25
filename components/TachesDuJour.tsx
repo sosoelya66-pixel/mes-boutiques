@@ -7,7 +7,7 @@ import { BordereauButton } from "@/components/BordereauButton";
 import { SaleForm } from "@/components/SaleForm";
 import { deleteTache, insertTaches, loadSyncInfo, loadTaches, setTacheFaite, updateListing, updateSale } from "@/lib/data";
 import type { Sale } from "@/lib/types";
-import { aVerifier, buildTaches, jourParis, resolue, type Tache } from "@/lib/taches";
+import { aVerifier, buildTaches, jourParis, moment, resolue, type Tache } from "@/lib/taches";
 
 /** Liste des tâches du jour, à cocher. Recréée chaque matin à partir des données. */
 export function TachesDuJour() {
@@ -17,7 +17,6 @@ export function TachesDuJour() {
   const [taches, setTaches] = useState<Tache[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [nouvelle, setNouvelle] = useState("");
-  const [voirFaites, setVoirFaites] = useState(false);
   const [partantes, setPartantes] = useState<string[]>([]); // tâches qui s'effacent (animation)
   const emails = useRef(0);
   const jour = jourParis();
@@ -25,7 +24,9 @@ export function TachesDuJour() {
   const sync = useCallback(async () => {
     try {
       emails.current = await loadSyncInfo().then((r) => aVerifier(r.log)).catch(() => 0);
-      const data = { shops: allShops.filter((s) => s.actif), sales: allSales, listings: allListings, emailsAVerifier: emails.current, objectifGlobal };
+      const hierJour = jourParis(new Date(Date.now() - 86400000));
+      const hier = await loadTaches(hierJour).catch(() => []);
+      const data = { hier, shops: allShops.filter((s) => s.actif), sales: allSales, listings: allListings, emailsAVerifier: emails.current, objectifGlobal };
       await insertTaches(jour, buildTaches(data));
       let list = await loadTaches(jour);
       // Cochage automatique de ce qui est déjà fait (colis envoyé, fiche publiée…)
@@ -45,18 +46,29 @@ export function TachesDuJour() {
     if (ready) sync();
   }, [ready, sync]);
 
+  const [annuler, setAnnuler] = useState<Tache | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   async function toggle(t: Tache) {
-    if (!t.fait && !voirFaites) {
-      // Petite animation : la tâche cochée glisse puis disparaît
-      setPartantes((p) => [...p, t.id]);
-      setTimeout(() => {
-        setPartantes((p) => p.filter((x) => x !== t.id));
-        setTaches((l) => l?.map((x) => (x.id === t.id ? { ...x, fait: true, auto: false } : x)) ?? null);
-      }, 450);
-    } else {
-      setTaches((l) => l?.map((x) => (x.id === t.id ? { ...x, fait: !x.fait, auto: false } : x)) ?? null);
-    }
-    await setTacheFaite(t.id, !t.fait);
+    // La tâche cochée glisse puis disparaît définitivement
+    setPartantes((p) => [...p, t.id]);
+    setTimeout(() => {
+      setPartantes((p) => p.filter((x) => x !== t.id));
+      setTaches((l) => l?.map((x) => (x.id === t.id ? { ...x, fait: true, auto: false } : x)) ?? null);
+    }, 450);
+    await setTacheFaite(t.id, true);
+    // « Annuler » pendant 5 secondes en cas d'erreur
+    setAnnuler(t);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setAnnuler(null), 5000);
+  }
+
+  async function undo() {
+    if (!annuler) return;
+    const t = annuler;
+    setAnnuler(null);
+    setTaches((l) => l?.map((x) => (x.id === t.id ? { ...x, fait: false } : x)) ?? null);
+    await setTacheFaite(t.id, false);
   }
 
   // Actions directes depuis la tâche (la tâche se coche ensuite toute seule)
@@ -162,12 +174,17 @@ export function TachesDuJour() {
 
   const faites = taches.filter((t) => t.fait).length;
   const pct = taches.length ? (faites / taches.length) * 100 : 0;
-  const shown = voirFaites ? taches : taches.filter((t) => !t.fait);
+  const shown = taches.filter((t) => !t.fait);
+  const MOMENTS = [
+    { key: "matin", label: "☀️ Matin", aide: "colis, prix, e-mails" },
+    { key: "journee", label: "🛍 Journée", aide: "tes boutiques" },
+    { key: "soir", label: "🌙 Soir", aide: "publier, contenu" },
+  ] as const;
 
   return (
     <section className="rise glass glow-corner rounded-2xl p-4 sm:p-5" style={{ ["--glow" as string]: "#8b7cf6" }}>
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-[15px] font-semibold">📋 Tâches du jour</h3>
+        <h3 className="text-[15px] font-semibold">📋 Ta journée</h3>
         <span className="flex items-center gap-2">
           {labels.length > 0 && (
             <button className="btn !px-2.5 !py-1 !text-xs" onClick={printAll} disabled={printing} title="Imprimer tous les bordereaux">
@@ -187,8 +204,16 @@ export function TachesDuJour() {
       </div>
       {faites === taches.length && taches.length > 0 && <p className="mt-3 text-sm text-profit">🎉 Tout est fait pour aujourd&apos;hui. Bravo !</p>}
 
-      <ul className="mt-3 divide-y divide-line">
-        {shown.map((t) => (
+      {MOMENTS.map((m) => {
+        const list = shown.filter((t) => moment(t.type) === m.key);
+        if (!list.length) return null;
+        return (
+          <div key={m.key} className="mt-4">
+            <div className="flex items-baseline gap-2 text-xs font-semibold uppercase tracking-wide text-muted">
+              {m.label} <span className="font-normal normal-case tracking-normal">· {m.aide}</span>
+            </div>
+            <ul className="mt-1 divide-y divide-line">
+            {list.map((t) => (
           <li
             key={t.id}
             className={`flex flex-wrap items-start gap-x-3 gap-y-2 py-2.5 transition-all duration-500 sm:flex-nowrap ${
@@ -228,7 +253,10 @@ export function TachesDuJour() {
             )}
           </li>
         ))}
-      </ul>
+            </ul>
+          </div>
+        );
+      })}
 
       <form onSubmit={ajouter} className="mt-3 flex gap-2">
         <input className="input py-2" placeholder="+ Ajouter une tâche" value={nouvelle} onChange={(e) => setNouvelle(e.target.value)} />
@@ -236,10 +264,13 @@ export function TachesDuJour() {
           Ajouter
         </button>
       </form>
-      {faites > 0 && (
-        <button onClick={() => setVoirFaites(!voirFaites)} className="mt-2 text-xs text-muted hover:text-white">
-          {voirFaites ? "Masquer les tâches faites" : `Afficher les tâches faites (${faites})`}
-        </button>
+      {annuler && (
+        <div className="mt-3 flex items-center justify-between rounded-xl border border-line bg-night/70 px-3 py-2 text-sm">
+          <span className="truncate text-muted">✓ {annuler.titre}</span>
+          <button onClick={undo} className="ml-3 shrink-0 font-medium text-revenue">
+            Annuler
+          </button>
+        </div>
       )}
       {editSale && <SaleForm sale={editSale} onClose={() => setEditSale(null)} />}
     </section>
