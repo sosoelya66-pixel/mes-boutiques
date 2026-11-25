@@ -1,11 +1,13 @@
 // Génère (ou régénère) les photos portées d'une fiche existante, à partir de ses photos produit.
 import { after } from "next/server";
 import { userOk } from "@/lib/auth-server";
+import { imagesFromLink } from "@/lib/fiches/imagesFromLink";
 import { triggerStep } from "@/lib/fiches/trigger";
 import { admin, getOwnerId } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 120;
 
 export async function POST(req: Request) {
   if (!(await userOk())) return Response.json({ error: "Non autorisé" }, { status: 401 });
@@ -25,9 +27,12 @@ export async function POST(req: Request) {
   const g = (l.generation ?? {}) as Record<string, unknown>;
   const dejaPortees = new Set([...((g.portees as string[] | undefined) ?? []), ...((g.anciennes as string[] | undefined) ?? [])]);
   // Photos produit = photos de la fiche qui ne sont pas des photos portées déjà générées
-  const produit = ((l.photos as string[]) ?? []).filter((u) => !dejaPortees.has(u)).slice(0, 3);
+  let produit = ((l.photos as string[]) ?? []).filter((u) => !dejaPortees.has(u)).slice(0, 3);
+  // Pas de photo produit : Claude essaie de les lire sur le lien produit
+  const lien = ((l.liens_produit as string[]) ?? [])[0];
+  if (!produit.length && lien) produit = await imagesFromLink(lien);
   if (!produit.length)
-    return Response.json({ error: "Ajoute d'abord une photo du produit (Modifier → + Photos), par exemple une capture d'écran Temu." }, { status: 400 });
+    return Response.json({ error: "Impossible de lire les photos sur le lien. Ajoute une capture du produit (Modifier → + Photos), puis réessaie." }, { status: 400 });
   const params = { ...((g.params as Record<string, unknown>) ?? {}), shop_id: l.shop_id, produit, nb_photos: nb };
   await admin()
     .from("listings")

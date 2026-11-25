@@ -7,6 +7,7 @@ import { admin, getOwnerId } from "@/lib/supabase/admin";
 import { htmlToText } from "@/lib/sync/run";
 import { humanError } from "./errors";
 import { generateFiche, readProductPage } from "./generate";
+import { imagesFromLink } from "./imagesFromLink";
 import { generateWornPhoto } from "./photos";
 
 export type JobParams = {
@@ -90,7 +91,9 @@ export async function runTextStep(id: string) {
     taille = shop?.taille ?? null;
     const page = p.lien ? await readProductPage(p.lien, htmlToText) : null;
     const f = await generateFiche({ lien: p.lien, page, photos: p.produit, taille, marque: p.marque, etat: p.etat, prix_achat: p.prix_achat, notes: p.notes });
-    const ref = p.produit.length ? p.produit : page?.images.slice(0, 1) ?? [];
+    // Photos du produit : celles fournies, sinon celles de la page, sinon lues par Claude sur le lien
+    let ref = p.produit.length ? p.produit : page?.images.slice(0, 1) ?? [];
+    if (!ref.length && p.lien && p.nb_photos > 0) ref = await imagesFromLink(p.lien);
     const notes = [`💡 ${f.conseil}`, p.lien && !page ? "Page produit illisible : fiche rédigée d'après les photos." : ""].filter(Boolean).join("\n");
     const photosNext = p.nb_photos > 0 && ref.length > 0;
     const erreurs =
@@ -108,8 +111,11 @@ export async function runTextStep(id: string) {
       prix: f.prix_conseille,
       prix_achat: p.prix_achat ?? f.prix_achat_trouve ?? 0,
       notes,
+      // Photos lues sur le lien : elles deviennent les photos produit de la fiche
+      ...(p.produit.length || !ref.length ? {} : { photos: ref }),
       generation: {
         ...g,
+        params: { ...p, produit: p.produit.length ? p.produit : ref },
         ref_images: ref,
         erreurs,
         statut: photosNext ? "en_cours" : erreurs.length ? "erreur" : "termine",

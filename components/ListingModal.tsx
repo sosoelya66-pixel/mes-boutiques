@@ -148,7 +148,11 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
         <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-line p-3 text-sm">
           <span className="flex-1 text-muted">
             📸 Photos portées avec l&apos;avatar de {shop.nom}
-            {!listing.photos.length && <span className="block text-xs text-alert">Ajoute d&apos;abord une photo du produit (Modifier → + Photos).</span>}
+            {!listing.photos.length && (
+              <span className="block text-xs">
+                {listing.liens_produit.length ? "Les photos du produit seront lues sur le lien (sinon ajoute une capture)." : "Ajoute une photo du produit (Modifier → + Photos)."}
+              </span>
+            )}
           </span>
           <select className="input w-auto !py-1.5" value={nbGen} onChange={(e) => setNbGen(Number(e.target.value))}>
             {[1, 2, 3, 4].map((n) => (
@@ -157,8 +161,8 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
               </option>
             ))}
           </select>
-          <button className="btn-primary !py-1.5" onClick={genererPhotos} disabled={genBusy || !listing.photos.length}>
-            {genBusy ? "…" : "Générer"}
+          <button className="btn-primary !py-1.5" onClick={genererPhotos} disabled={genBusy || (!listing.photos.length && !listing.liens_produit.length)}>
+            {genBusy ? "Lecture du lien…" : "Générer"}
           </button>
         </div>
       )}
