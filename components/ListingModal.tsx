@@ -86,6 +86,20 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
         </button>
       </div>
 
+      {listing.generation?.statut === "en_cours" && (
+        <div className="mt-4 rounded-xl border border-revenue/40 bg-revenue/10 px-4 py-2.5 text-sm">
+          <span className="inline-block animate-spin">⟳</span> En préparation : {listing.generation.etape}. Les photos apparaissent au fur et
+          à mesure.
+        </div>
+      )}
+      {!!listing.generation?.erreurs?.length && (
+        <div className="mt-4 rounded-xl border border-alert/40 bg-alert/10 px-4 py-2.5 text-sm text-alert">
+          {listing.generation.erreurs.map((e) => (
+            <div key={e}>⚠️ {e}</div>
+          ))}
+        </div>
+      )}
+
       {listing.photos.length > 0 && (
         <div className="no-scrollbar -mx-6 mt-4 flex gap-2 overflow-x-auto px-6">
           {listing.photos.map((p) => (

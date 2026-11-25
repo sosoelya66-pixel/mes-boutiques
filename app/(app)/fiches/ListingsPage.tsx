@@ -15,13 +15,22 @@ import { LISTING_STATUTS, type Listing, type ListingStatus } from "@/lib/types";
 /* eslint-disable @next/next/no-img-element */
 
 export function ListingsPage() {
-  const { listings, shops, shopId, setShopId, shopById, ready, error } = useAppState();
+  const { listings, shops, shopId, setShopId, shopById, ready, error, refresh } = useAppState();
+  const generating = listings.some((l) => l.generation?.statut === "en_cours");
+
+  // Tant qu'une fiche se prépare, on rafraîchit toutes les 5 secondes
+  useEffect(() => {
+    if (!generating) return;
+    const t = setInterval(() => refresh(), 5000);
+    return () => clearInterval(t);
+  }, [generating, refresh]);
   const params = useSearchParams();
   const [statut, setStatut] = useState<ListingStatus | "">("");
   const [q, setQ] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [creatingAI, setCreatingAI] = useState(false);
+  const [started, setStarted] = useState(false);
 
   // Lien direct depuis Cowork : /fiches?fiche=<id>
   useEffect(() => {
@@ -57,6 +66,18 @@ export function ListingsPage() {
         </button>
         <span className="text-sm text-muted">Les fiches créées par Cowork arrivent aussi ici automatiquement.</span>
       </div>
+
+      {started && (
+        <div className="rise flex items-start justify-between gap-3 rounded-2xl border border-revenue/40 bg-revenue/10 px-5 py-3 text-sm">
+          <span>
+            ✨ Fiche en préparation. Tu peux fermer l&apos;appli : tu recevras une notification quand elle sera prête
+            {generating ? "." : " (c'est fait !)."}
+          </span>
+          <button className="text-muted hover:text-white" onClick={() => setStarted(false)} aria-label="Fermer">
+            ×
+          </button>
+        </div>
+      )}
 
       <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
         <input
@@ -107,7 +128,15 @@ export function ListingsPage() {
                 <div className="relative aspect-[4/5] bg-line">
                   {l.photos[0] && <img src={l.photos[0]} alt="" className="h-full w-full object-cover" />}
                   <span className="absolute left-2 top-2">
-                    <ListingBadge statut={l.statut} />
+                    {l.generation?.statut === "en_cours" ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-revenue/90 px-2.5 py-0.5 text-xs font-medium text-white shadow-[0_0_12px_rgba(139,124,246,.8)]">
+                        <span className="inline-block animate-spin">⟳</span> {l.generation.etape}
+                      </span>
+                    ) : l.generation?.erreurs?.length ? (
+                      <span className="rounded-full bg-alert/90 px-2.5 py-0.5 text-xs font-medium text-night">À vérifier</span>
+                    ) : (
+                      <ListingBadge statut={l.statut} />
+                    )}
                   </span>
                   {l.photos.length > 1 && (
                     <span className="absolute bottom-2 right-2 rounded-full bg-night/80 px-2 py-0.5 text-xs">
@@ -137,9 +166,9 @@ export function ListingsPage() {
       {creatingAI && (
         <CreateWithAI
           onClose={() => setCreatingAI(false)}
-          onCreated={(id) => {
+          onStarted={() => {
             setCreatingAI(false);
-            setOpenId(id);
+            setStarted(true);
           }}
         />
       )}

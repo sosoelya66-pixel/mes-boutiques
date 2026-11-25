@@ -173,3 +173,6 @@ grant select on public.push_subscriptions to authenticated;
 grant select, insert, update, delete on public.push_subscriptions to service_role;
 
 alter table public.sync_state add column if not exists derniere_relance date;
+
+-- Fiches en arrière-plan (identique à correctif-6)
+alter table public.listings add column if not exists generation jsonb;

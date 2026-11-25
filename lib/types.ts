@@ -79,7 +79,17 @@ export type Listing = {
   vinted_url: string | null;
   notes: string | null;
   statut: ListingStatus;
+  /** Préparation par Claude en arrière-plan (null pour une fiche classique) */
+  generation?: ListingGeneration | null;
   created_at: string;
+};
+
+export type ListingGeneration = {
+  statut: "en_cours" | "termine" | "erreur";
+  etape: string; // texte du suivi, ex. « Photo 2/3 »
+  photos_prevues: number;
+  photos_faites: number;
+  erreurs: string[];
 };
 
 export const STATUTS: { value: SaleStatus; label: string }[] = [
