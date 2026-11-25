@@ -206,7 +206,21 @@ export async function runSync(rescanDays = 0): Promise<SyncSummary> {
         };
         try {
           const r = await applyEmail(owner, meta, data);
+          // Première fois qu'un e-mail est reconnu pour cette boutique : on prévient
+          let premiere = false;
+          if (r.shop_id) {
+            const { count } = await db.from("email_log").select("id", { count: "exact", head: true }).eq("shop_id", r.shop_id);
+            premiere = !count;
+          }
           await db.from("email_log").insert({ ...log, shop_id: r.shop_id, sale_id: r.sale_id, statut: r.statut, detail: r.detail });
+          if (premiere && r.shop_id) {
+            const { data: sh } = await db.from("shops").select("nom").eq("id", r.shop_id).maybeSingle();
+            await sendPush({
+              title: `✅ ${sh?.nom ?? "Boutique"} est synchronisée`,
+              body: "Ses e-mails Vinted sont bien reconnus : ses ventes arriveront toutes seules.",
+              url: "/boutiques",
+            }).catch(() => 0);
+          }
           sum[r.statut === "traite" ? "traites" : r.statut === "ignore" ? "ignores" : "a_verifier"]++;
           if (r.nouvelleVente) newSales.push(r.nouvelleVente);
         } catch (e) {

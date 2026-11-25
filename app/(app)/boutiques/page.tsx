@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAppState } from "@/components/AppState";
 import { ErrorBox } from "@/components/dashboard/Dashboard";
 import { Dot } from "@/components/Header";
@@ -10,7 +10,8 @@ import { NotificationsCard } from "@/components/NotificationsCard";
 import { ObjectifsCard } from "@/components/ObjectifsCard";
 import { SyncPanel } from "@/components/SyncPanel";
 import { Thumb } from "@/components/ui/Thumb";
-import { createShop, deleteShop, updateShop, uploadPhoto } from "@/lib/data";
+import { createShop, deleteShop, loadShopSync, updateShop, uploadPhoto } from "@/lib/data";
+import { ShopSyncBadge } from "@/components/ShopSyncBadge";
 import { defaultPhotoPrompt } from "@/lib/prompt";
 import { styleComplet, stylePhotos, type Shop } from "@/lib/types";
 import { ShopIdCard } from "@/components/ShopIdCard";
@@ -21,6 +22,10 @@ export default function BoutiquesPage() {
   const { allShops, allSales, ready, error, refresh } = useAppState();
   const [form, setForm] = useState<Shop | "new" | null>(null);
   const [idCard, setIdCard] = useState<Shop | null>(null);
+  const [syncs, setSyncs] = useState<Record<string, string>>({});
+  useEffect(() => {
+    loadShopSync().then(setSyncs).catch(() => {});
+  }, [allSales, allShops]);
   const salesCount = (id: string) => allSales.filter((s) => s.shop_id === id).length;
 
   async function remove(shop: Shop) {
@@ -83,7 +88,10 @@ export default function BoutiquesPage() {
                 </button>
               </div>
             </div>
-            <dl className="mt-5 space-y-2 text-sm">
+            <div className="mt-4">
+              <ShopSyncBadge shop={s} last={syncs[s.id]} />
+            </div>
+            <dl className="mt-4 space-y-2 text-sm">
               <Row k="Alias e-mail" v={s.alias_email || "—"} />
               <Row k="Ventes" v={String(salesCount(s.id))} />
               <Row

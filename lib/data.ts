@@ -159,3 +159,17 @@ export const setTacheFaite = async (id: string, fait: boolean, auto = false) =>
   check(await supabase.from("taches").update({ fait, auto: fait && auto, fait_le: fait ? new Date().toISOString() : null }).eq("id", id));
 
 export const deleteTache = async (id: string) => check(await supabase.from("taches").delete().eq("id", id));
+
+/** Dernier e-mail Vinted reconnu pour chaque boutique (id → date). */
+export async function loadShopSync(): Promise<Record<string, string>> {
+  const r = await supabase
+    .from("email_log")
+    .select("shop_id, recu_le")
+    .not("shop_id", "is", null)
+    .order("recu_le", { ascending: false })
+    .limit(1000);
+  if (r.error) throw new Error(r.error.message);
+  const out: Record<string, string> = {};
+  for (const row of r.data as { shop_id: string; recu_le: string }[]) if (!out[row.shop_id]) out[row.shop_id] = row.recu_le;
+  return out;
+}
