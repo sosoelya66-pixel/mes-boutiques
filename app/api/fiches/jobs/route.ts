@@ -23,12 +23,15 @@ export async function POST(req: Request) {
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const lien = typeof b.lien === "string" && b.lien.trim() ? b.lien.trim() : null;
   const produit = (Array.isArray(b.produit) ? b.produit : []).filter((u): u is string => typeof u === "string" && u.startsWith("https://")).slice(0, 6);
-  if (!b.shop_id || typeof b.shop_id !== "string") return Response.json({ error: "Choisis une boutique." }, { status: 400 });
+  const attente = b.attente === true;
+  const existingId = typeof b.id === "string" && b.id ? b.id : undefined;
+  const shopId = typeof b.shop_id === "string" ? b.shop_id : "";
+  if (!shopId && !attente) return Response.json({ error: "Choisis une boutique." }, { status: 400 });
   if (!lien && !produit.length) return Response.json({ error: "Donne un lien produit ou au moins une photo." }, { status: 400 });
   const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
   try {
     const id = await createJob({
-      shop_id: b.shop_id,
+      shop_id: shopId,
       lien,
       produit,
       marque: str(b.marque),
@@ -37,7 +40,8 @@ export async function POST(req: Request) {
       notes: str(b.notes),
       ...typesOf(b.photos_types, Number(b.nb_photos ?? 0)),
       mode: modeValide(b.mode),
-    });
+    }, { enAttente: attente, existingId });
+    if (attente) return Response.json({ id });
     const origin = new URL(req.url).origin;
     after(() => triggerStep(origin, { id, step: "texte" }));
     return Response.json({ id });

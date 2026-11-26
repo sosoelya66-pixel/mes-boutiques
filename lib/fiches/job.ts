@@ -28,7 +28,7 @@ export type JobParams = {
 };
 
 type Gen = {
-  statut: "en_cours" | "termine" | "erreur";
+  statut: "en_attente" | "en_cours" | "termine" | "erreur";
   etape: string;
   photos_prevues: number;
   photos_faites: number;
@@ -58,12 +58,16 @@ async function save(id: string, patch: Record<string, unknown>) {
   if (error) throw new Error(error.message);
 }
 
-/** Crée la fiche « en préparation » et renvoie son id. */
-export async function createJob(p: JobParams) {
+/**
+ * Crée la fiche « en préparation » et renvoie son id.
+ * - enAttente : la fiche est seulement mise de côté (« À générer »), rien n'est lancé, rien n'est payé.
+ * - existingId : on lance la génération d'une fiche mise de côté (au lieu d'en créer une nouvelle).
+ */
+export async function createJob(p: JobParams, opts: { enAttente?: boolean; existingId?: string } = {}) {
   const owner = await getOwnerId();
   const gen: Gen = {
-    statut: "en_cours",
-    etape: "Claude rédige la fiche",
+    statut: opts.enAttente ? "en_attente" : "en_cours",
+    etape: opts.enAttente ? "À générer" : "Claude rédige la fiche",
     photos_prevues: p.nb_photos,
     photos_faites: 0,
     erreurs: [],
@@ -71,20 +75,22 @@ export async function createJob(p: JobParams) {
     ref_images: p.produit,
     portees: [],
   };
-  const { data, error } = await admin()
-    .from("listings")
-    .insert({
-      owner_id: owner,
-      shop_id: p.shop_id,
-      titre: "✨ Fiche en préparation…",
-      photos: p.produit,
-      liens_produit: p.lien ? [p.lien] : [],
-      prix_achat: p.prix_achat ?? 0,
-      statut: "brouillon",
-      generation: gen,
-    })
-    .select("id")
-    .single();
+  const row = {
+    shop_id: p.shop_id || null,
+    titre: opts.enAttente ? "🕓 À générer" : "✨ Fiche en préparation…",
+    photos: p.produit,
+    liens_produit: p.lien ? [p.lien] : [],
+    prix_achat: p.prix_achat ?? 0,
+    notes: p.notes,
+    marque: p.marque,
+    etat: p.etat,
+    statut: "brouillon",
+    generation: gen,
+  };
+  const q = opts.existingId
+    ? admin().from("listings").update(row).eq("id", opts.existingId).eq("owner_id", owner)
+    : admin().from("listings").insert({ owner_id: owner, ...row });
+  const { data, error } = await q.select("id").single();
   if (error) throw new Error(error.message);
   return data.id as string;
 }

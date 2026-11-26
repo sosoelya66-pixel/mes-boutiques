@@ -93,7 +93,7 @@ export type Listing = {
 };
 
 export type ListingGeneration = {
-  statut: "en_cours" | "termine" | "erreur";
+  statut: "en_attente" | "en_cours" | "termine" | "erreur";
   etape: string; // texte du suivi, ex. « Photo 2/3 »
   photos_prevues: number;
   photos_faites: number;

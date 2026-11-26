@@ -103,7 +103,7 @@ export function buildTaches(d: Data, now = new Date()): TacheInput[] {
 
   // 4. Fiches en brouillon à publier
   d.listings
-    .filter((l) => l.statut === "brouillon" && !(l.generation?.statut === "en_cours"))
+    .filter((l) => l.statut === "brouillon" && !(l.generation?.statut === "en_cours" || l.generation?.statut === "en_attente"))
     .slice(0, 5)
     .forEach((l, i) =>
       t.push({ cle: `publier:${l.id}`, type: "publier", titre: `${shopName(l.shop_id)} : Publier « ${l.titre} »`, detail: "Idéalement entre 18 h et 21 h", lien: `/fiches?fiche=${l.id}`, ordre: 40 + i })

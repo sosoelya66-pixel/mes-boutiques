@@ -28,7 +28,16 @@ export function CreateWithAI({
   onClose: () => void;
   onStarted: (id: string) => void;
   /** Pré-remplissage (ex. depuis le Radar) */
-  initial?: { shop_id?: string | null; lien?: string; prix_achat?: number; photo?: string | null; notes?: string };
+  initial?: {
+    shop_id?: string | null;
+    lien?: string;
+    prix_achat?: number;
+    photo?: string | null;
+    photos?: string[];
+    notes?: string;
+    /** Fiche « À générer » à compléter (au lieu d'en créer une nouvelle) */
+    draftId?: string;
+  };
 }) {
   const { shops, shopId, refresh } = useAppState();
   const [v, setV] = useState({
@@ -36,10 +45,10 @@ export function CreateWithAI({
     lien: initial?.lien ?? "",
     prix_achat: initial?.prix_achat != null ? String(initial.prix_achat) : "",
     marque: "",
-    etat: initial ? "Neuf sans étiquette" : "",
+    etat: initial && !initial.draftId ? "Neuf sans étiquette" : "",
     notes: initial?.notes ?? "",
   });
-  const [produit, setProduit] = useState<string[]>(initial?.photo ? [initial.photo] : []);
+  const [produit, setProduit] = useState<string[]>(initial?.photos ?? (initial?.photo ? [initial.photo] : []));
   const [types, setTypes] = useState<PhotoType[]>(DEFAULT_SERIE);
   const [mode, setMode] = useMode();
   const [uploading, setUploading] = useState(false);
@@ -66,6 +75,34 @@ export function CreateWithAI({
     }
   }
 
+  /** Met la fiche de côté dans « À générer » : rien n'est lancé, rien n'est payé. */
+  async function later() {
+    setError(null);
+    if (!v.lien.trim() && !produit.length) return setError("Colle un lien produit ou ajoute au moins une photo du produit.");
+    setSending(true);
+    try {
+      const prixAchat = parseFloat(v.prix_achat.replace(",", "."));
+      const cibles = selection.length ? selection.map((s) => s.id) : [""];
+      for (const [i, shop_id] of cibles.entries())
+        await post("/api/fiches/jobs", {
+          attente: true,
+          id: i === 0 ? initial?.draftId : undefined,
+          shop_id,
+          lien: v.lien.trim() || undefined,
+          produit,
+          marque: v.marque,
+          etat: v.etat,
+          prix_achat: Number.isFinite(prixAchat) ? prixAchat : null,
+          notes: v.notes,
+        });
+      await refresh();
+      onClose();
+    } catch (e) {
+      setError((e as Error).message);
+      setSending(false);
+    }
+  }
+
   async function run() {
     setError(null);
     if (!selection.length) return setError("Coche au moins une boutique.");
@@ -75,8 +112,9 @@ export function CreateWithAI({
       const prixAchat = parseFloat(v.prix_achat.replace(",", "."));
       let premier = "";
       // Une fiche par boutique, chacune avec sa taille et sa carte d'identité
-      for (const shop of selection) {
+      for (const [i, shop] of selection.entries()) {
         const r = await post<{ id: string }>("/api/fiches/jobs", {
+          id: i === 0 ? initial?.draftId : undefined,
           shop_id: shop.id,
           lien: v.lien.trim() || undefined,
           produit,
@@ -224,9 +262,12 @@ export function CreateWithAI({
             La fiche se prépare en arrière-plan : tu peux fermer l&apos;appli, tu recevras une notification quand elle sera prête.
           </p>
           {error && <p className="text-sm text-alert sm:col-span-2">{error}</p>}
-          <div className="flex justify-end gap-2 sm:col-span-2">
+          <div className="flex flex-wrap justify-end gap-2 sm:col-span-2">
             <button className="btn" onClick={onClose}>
               Annuler
+            </button>
+            <button className="btn" onClick={later} disabled={uploading || sending} title="Rien n'est généré ni payé pour l'instant">
+              🕓 Finir plus tard
             </button>
             <button className="btn-primary" onClick={run} disabled={uploading || sending}>
               {sending ? "Envoi…" : selection.length > 1 ? `✨ Créer ${selection.length} fiches` : "✨ Créer la fiche"}

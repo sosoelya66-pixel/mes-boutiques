@@ -4,6 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getPeriod, type PeriodKey } from "@/lib/period";
 import { photoPrompt } from "@/lib/prompt";
+import { createJob } from "@/lib/fiches/job";
 import { admin, getOwnerId } from "@/lib/supabase/admin";
 import { evolution, totals } from "@/lib/stats";
 import { benefice, type Listing, type Sale } from "@/lib/types";
@@ -283,6 +284,50 @@ export function buildServer(appUrl: string) {
             .filter((f) => !t || f.titre.toLowerCase().includes(t) || f.liens_produit.some((l: string) => l.toLowerCase().includes(t)))
             .map((f) => ({ ...f, boutique: all.find((s) => s.id === f.shop_id)?.nom, lien: ficheLink(f.id) }))
         );
+      } catch (e) {
+        return fail((e as Error).message);
+      }
+    }
+  );
+
+  server.registerTool(
+    "ajouter_liens_a_generer",
+    {
+      title: "Mettre des liens produits en attente de génération",
+      description:
+        "Met un ou plusieurs liens produits (AliExpress, Temu, Shein…) dans la liste « À générer » de l'onglet Fiches de l'appli. " +
+        "Rien n'est généré ni payé : l'utilisateur lancera la génération plus tard depuis l'appli (en ajoutant ses captures). " +
+        "À utiliser dès que l'utilisateur envoie des liens produits. Une fiche en attente par lien et par boutique.",
+      inputSchema: {
+        liens: z.array(z.string().url()).min(1).max(50).describe("Liens produits"),
+        boutiques: z.array(z.string()).optional().describe("Noms ou ids des boutiques (facultatif : à choisir plus tard)"),
+        prix_achat: z.number().nonnegative().optional().describe("Prix d'achat, si un seul lien"),
+        notes: z.string().optional().describe("Notes pour la génération (taille, coupe…)"),
+      },
+    },
+    async (a) => {
+      try {
+        const owner = await getOwnerId();
+        const cibles = a.boutiques?.length ? await Promise.all(a.boutiques.map((b) => findShop(owner, b))) : [null];
+        const ids: string[] = [];
+        for (const lien of a.liens)
+          for (const shop of cibles)
+            ids.push(
+              await createJob(
+                {
+                  shop_id: shop?.id ?? "",
+                  lien,
+                  produit: [],
+                  marque: null,
+                  etat: null,
+                  prix_achat: a.liens.length === 1 ? (a.prix_achat ?? null) : null,
+                  notes: a.notes ?? null,
+                  nb_photos: 0,
+                },
+                { enAttente: true }
+              )
+            );
+        return ok({ ajoutees: ids.length, message: "Liens mis dans « À générer » (onglet Fiches de l'appli).", fiches: ids.map(ficheLink) });
       } catch (e) {
         return fail((e as Error).message);
       }

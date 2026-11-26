@@ -31,6 +31,8 @@ export function ListingsPage() {
   const [creating, setCreating] = useState(false);
   const [creatingAI, setCreatingAI] = useState(false);
   const [started, setStarted] = useState(false);
+  const [draft, setDraft] = useState<Listing | null>(null);
+  const attente = listings.filter((l) => l.generation?.statut === "en_attente");
 
   // Lien direct depuis Cowork : /fiches?fiche=<id>
   useEffect(() => {
@@ -42,6 +44,7 @@ export function ListingsPage() {
     const t = q.trim().toLowerCase();
     return listings.filter(
       (l) =>
+        l.generation?.statut !== "en_attente" &&
         (!statut || l.statut === statut) &&
         (!t ||
           l.titre.toLowerCase().includes(t) ||
@@ -51,6 +54,8 @@ export function ListingsPage() {
   }, [listings, statut, q]);
 
   const open: Listing | undefined = listings.find((l) => l.id === openId);
+  // Lien vers une fiche « À générer » : on ouvre directement le formulaire de génération
+  const enCours = draft ?? (open?.generation?.statut === "en_attente" ? open : null);
   const count = (s: ListingStatus) => listings.filter((l) => l.statut === s).length;
 
   if (error) return <ErrorBox message={error} />;
@@ -78,6 +83,8 @@ export function ListingsPage() {
           </button>
         </div>
       )}
+
+      <AGenerer attente={attente} onOpen={setDraft} />
 
       <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
         <input
@@ -161,8 +168,30 @@ export function ListingsPage() {
         </div>
       )}
 
-      {open && <ListingModal listing={open} onClose={() => setOpenId(null)} />}
+      {open && open.generation?.statut !== "en_attente" && <ListingModal listing={open} onClose={() => setOpenId(null)} />}
       {creating && <ListingForm onClose={() => setCreating(false)} />}
+      {enCours && (
+        <CreateWithAI
+          key={enCours.id}
+          initial={{
+            draftId: enCours.id,
+            shop_id: enCours.shop_id,
+            lien: enCours.liens_produit[0] ?? "",
+            photos: enCours.photos,
+            prix_achat: enCours.prix_achat || undefined,
+            notes: enCours.notes ?? "",
+          }}
+          onClose={() => {
+            setDraft(null);
+            setOpenId(null);
+          }}
+          onStarted={() => {
+            setDraft(null);
+            setOpenId(null);
+            setStarted(true);
+          }}
+        />
+      )}
       {creatingAI && (
         <CreateWithAI
           onClose={() => setCreatingAI(false)}
@@ -173,5 +202,113 @@ export function ListingsPage() {
         />
       )}
     </div>
+  );
+}
+
+/* ---------- « À générer » : liens mis de côté, rien n'est payé tant qu'on ne lance pas ---------- */
+
+function AGenerer({ attente, onOpen }: { attente: Listing[]; onOpen: (l: Listing) => void }) {
+  const { shops, shopById, refresh } = useAppState();
+  const [liens, setLiens] = useState("");
+  const [shop, setShop] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function ajouter() {
+    const urls = [...new Set(liens.match(/https?:\/\/[^\s,;]+/g) ?? [])];
+    if (!urls.length) return setMsg("Colle au moins un lien (https://…).");
+    setBusy(true);
+    setMsg(null);
+    try {
+      for (const lien of urls) {
+        const res = await fetch("/api/fiches/jobs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ attente: true, shop_id: shop, lien }),
+        });
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `Erreur ${res.status}`);
+      }
+      setLiens("");
+      setMsg(`${urls.length} lien${urls.length > 1 ? "s" : ""} ajouté${urls.length > 1 ? "s" : ""}.`);
+      await refresh();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function retirer(id: string) {
+    if (!confirm("Retirer ce lien de la liste ?")) return;
+    await fetch(`/api/fiches/jobs/attente?id=${id}`, { method: "DELETE" });
+    await refresh();
+  }
+
+  return (
+    <details className="rounded-2xl glass p-4" open={attente.length > 0}>
+      <summary className="cursor-pointer text-sm font-medium">
+        🕓 À générer {attente.length > 0 && <span className="text-gold">({attente.length})</span>}
+        <span className="ml-2 text-xs font-normal text-muted">liens mis de côté · rien n&apos;est payé tant que tu ne lances pas</span>
+      </summary>
+      <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+        <textarea
+          className="input min-h-[44px]"
+          rows={2}
+          placeholder="Colle un ou plusieurs liens produits (un par ligne)…"
+          value={liens}
+          onChange={(e) => setLiens(e.target.value)}
+        />
+        <select className="input sm:w-44" value={shop} onChange={(e) => setShop(e.target.value)}>
+          <option value="">Boutique : plus tard</option>
+          {shops.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.nom}
+            </option>
+          ))}
+        </select>
+        <button className="btn-primary" onClick={ajouter} disabled={busy}>
+          {busy ? "…" : "Ajouter"}
+        </button>
+      </div>
+      {msg && <p className="mt-2 text-xs text-muted">{msg}</p>}
+      {attente.length > 0 && (
+        <ul className="mt-3 divide-y divide-line">
+          {attente.map((l) => {
+            const s = shopById(l.shop_id);
+            const lien = l.liens_produit[0];
+            let host = "";
+            try {
+              host = lien ? new URL(lien).hostname.replace(/^www\.|^fr\./, "") : "";
+            } catch {}
+            return (
+              <li key={l.id} className="flex items-center gap-3 py-2.5">
+                {l.photos[0] ? (
+                  <img src={l.photos[0]} alt="" className="h-11 w-11 shrink-0 rounded-lg object-cover" />
+                ) : (
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-line text-lg">🔗</span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm">{host || "Photos seulement"}{l.notes ? ` · ${l.notes}` : ""}</div>
+                  <div className="flex items-center gap-1.5 text-xs text-muted">
+                    <Dot color={s?.couleur} size={7} /> {s?.nom ?? "Boutique à choisir"} · {l.photos.length} capture{l.photos.length > 1 ? "s" : ""}
+                    {lien && (
+                      <a href={lien} target="_blank" rel="noreferrer" className="ml-1 text-revenue hover:underline">
+                        ouvrir
+                      </a>
+                    )}
+                  </div>
+                </div>
+                <button className="btn-primary shrink-0 !px-3 !py-1.5 !text-xs" onClick={() => onOpen(l)}>
+                  ✨ Générer
+                </button>
+                <button className="shrink-0 px-1 text-lg text-muted hover:text-alert" onClick={() => retirer(l.id)} aria-label="Retirer">
+                  ×
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </details>
   );
 }
