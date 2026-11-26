@@ -13,6 +13,7 @@ import { euros } from "@/lib/format";
 import { shortUrl } from "@/lib/links";
 import { photoPrompt } from "@/lib/prompt";
 import { PhotoTypesPicker } from "@/components/PhotoTypesPicker";
+import { SavePhotos } from "@/components/SavePhotos";
 import { DEFAULT_SERIE, type PhotoType } from "@/lib/fiches/photoTypes";
 import type { Listing, Sale } from "@/lib/types";
 
@@ -241,6 +242,18 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
         )}
       </div>
 
+      {listing.statut === "brouillon" && listing.photos.length > 0 && (
+        <div className="mt-5 rounded-xl border border-[#d4b483]/25 bg-[#d4b483]/[0.06] p-3">
+          <div className="text-sm font-medium">Publier sur Vinted</div>
+          <ol className="mt-1 list-decimal pl-5 text-xs text-muted">
+            <li>Enregistre les photos (elles arrivent en haut de ta galerie, dans l&apos;ordre).</li>
+            <li>« Copier tout » puis colle dans Vinted ; complète catégorie, taille, état, prix.</li>
+            <li>Une fois publiée, touche « Publiée ✓ ».</li>
+          </ol>
+          <SavePhotos photos={listing.photos} titre={listing.titre} className="btn-primary mt-3 w-full" />
+        </div>
+      )}
+
       <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
         <CopyButton text={all} label="Copier tout" className="!rounded-xl !px-3.5 !py-2 !text-sm" />
         {shop && (
@@ -262,7 +275,7 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
               onClose();
             }}
           >
-            Marquer en ligne
+            Publiée ✓
           </button>
         )}
         {listing.statut !== "vendu" && (

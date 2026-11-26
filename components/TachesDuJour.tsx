@@ -112,7 +112,7 @@ export function TachesDuJour() {
               </Link>
             )}
             <button className={ok} onClick={() => act(() => updateListing(idOf(t), { statut: "en_ligne" }))}>
-              En ligne ✓
+              Publiée ✓
             </button>
           </>
         );
