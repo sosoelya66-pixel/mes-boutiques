@@ -61,7 +61,7 @@ export async function extractEmail(input: {
   ].join("\n");
 
   const response = await client.beta.messages.parse({
-    model: process.env.ANTHROPIC_MODEL || "claude-opus-5-5",
+    model: process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5",
     max_tokens: 4000,
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default",
