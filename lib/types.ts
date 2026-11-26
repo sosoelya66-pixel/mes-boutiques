@@ -99,6 +99,8 @@ export type ListingGeneration = {
   photos_faites: number;
   erreurs: string[];
   brief?: { resume_fr: string; points_cles: string[] };
+  portees?: string[]; // photos générées (dernière série)
+  anciennes?: string[]; // photos générées des séries précédentes
   controles?: string[];
 };
 

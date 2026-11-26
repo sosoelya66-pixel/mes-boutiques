@@ -41,6 +41,10 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
     }
   }
   const shop = shopById(listing.shop_id);
+  // Photos générées par l'appli (photos portées, à plat, sur cintre) / captures importées
+  const dejaGenerees = new Set([...(listing.generation?.portees ?? []), ...(listing.generation?.anciennes ?? [])]);
+  const generees = listing.photos.filter((p) => dejaGenerees.has(p));
+  const fournisseur = listing.photos.filter((p) => !dejaGenerees.has(p));
 
   if (mode === "edit") return <ListingForm listing={listing} onClose={onClose} />;
   if (mode === "sold")
@@ -161,17 +165,36 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
         </details>
       )}
 
-      {listing.photos.length > 0 && (
-        <div className="no-scrollbar -mx-6 mt-4 flex gap-2 overflow-x-auto px-6">
-          {listing.photos.map((p) => (
-            <a key={p} href={p} target="_blank" rel="noreferrer" className="shrink-0">
-              <img loading="lazy" decoding="async" src={p} alt="" className="h-36 w-28 rounded-xl object-cover" />
-            </a>
-          ))}
+      {/* Photos générées (à publier) et captures fournisseur (gardées à part, jamais enregistrées dans la galerie) */}
+      {generees.length > 0 && (
+        <div className="mt-4">
+          <div className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">Photos générées · à publier</div>
+          <div className="no-scrollbar -mx-6 flex gap-2 overflow-x-auto px-6">
+            {generees.map((p) => (
+              <a key={p} href={p} target="_blank" rel="noreferrer" className="shrink-0">
+                <img loading="lazy" decoding="async" src={p} alt="" className="h-36 w-28 rounded-xl object-cover" />
+              </a>
+            ))}
+          </div>
+          <SavePhotos photos={generees} titre={listing.titre} className="btn-primary mt-3 w-full" />
         </div>
       )}
-      {/* Enregistrer toutes les photos dans la galerie, en un toucher */}
-      {listing.photos.length > 0 && <SavePhotos photos={listing.photos} titre={listing.titre} className="btn-primary mt-3 w-full" />}
+      {fournisseur.length > 0 && (
+        <div className="mt-4">
+          <div className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">
+            {generees.length ? "Captures fournisseur · modèles, non publiées" : "Photos"}
+          </div>
+          <div className="no-scrollbar -mx-6 flex gap-2 overflow-x-auto px-6">
+            {fournisseur.map((p) => (
+              <a key={p} href={p} target="_blank" rel="noreferrer" className="shrink-0">
+                <img loading="lazy" decoding="async" src={p} alt="" className={`rounded-xl object-cover ${generees.length ? "h-20 w-16 opacity-80" : "h-36 w-28"}`} />
+              </a>
+            ))}
+          </div>
+          {/* Fiche sans photos générées (créée à la main ou par Cowork) : on peut enregistrer ses photos */}
+          {!generees.length && <SavePhotos photos={fournisseur} titre={listing.titre} className="btn-primary mt-3 w-full" />}
+        </div>
+      )}
 
       {/* Photos à la demande : on choisit le type de chaque photo */}
       {listing.generation?.statut !== "en_cours" && shop && (
@@ -248,7 +271,7 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
         <div className="mt-5 rounded-xl border border-[#d4b483]/25 bg-[#d4b483]/[0.06] p-3">
           <div className="text-sm font-medium">Publier sur Vinted</div>
           <ol className="mt-1 list-decimal pl-5 text-xs text-muted">
-            <li>Touche « 📲 Enregistrer les photos » (sous les photos) : elles arrivent en haut de ta galerie.</li>
+            <li>Touche « 📲 Enregistrer les photos » : seules les photos générées arrivent en haut de ta galerie.</li>
             <li>« Copier tout » puis colle dans Vinted ; complète catégorie, taille, état, prix.</li>
             <li>Une fois publiée, touche « Publiée ✓ ».</li>
           </ol>
