@@ -170,6 +170,8 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
           ))}
         </div>
       )}
+      {/* Enregistrer toutes les photos dans la galerie, en un toucher */}
+      {listing.photos.length > 0 && <SavePhotos photos={listing.photos} titre={listing.titre} className="btn-primary mt-3 w-full" />}
 
       {/* Photos à la demande : on choisit le type de chaque photo */}
       {listing.generation?.statut !== "en_cours" && shop && (
@@ -246,11 +248,10 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
         <div className="mt-5 rounded-xl border border-[#d4b483]/25 bg-[#d4b483]/[0.06] p-3">
           <div className="text-sm font-medium">Publier sur Vinted</div>
           <ol className="mt-1 list-decimal pl-5 text-xs text-muted">
-            <li>Enregistre les photos (elles arrivent en haut de ta galerie, dans l&apos;ordre).</li>
+            <li>Touche « 📲 Enregistrer les photos » (sous les photos) : elles arrivent en haut de ta galerie.</li>
             <li>« Copier tout » puis colle dans Vinted ; complète catégorie, taille, état, prix.</li>
             <li>Une fois publiée, touche « Publiée ✓ ».</li>
           </ol>
-          <SavePhotos photos={listing.photos} titre={listing.titre} className="btn-primary mt-3 w-full" />
         </div>
       )}
 
