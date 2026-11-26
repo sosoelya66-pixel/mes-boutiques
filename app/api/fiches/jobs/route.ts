@@ -2,6 +2,7 @@
 import { after } from "next/server";
 import { userOk } from "@/lib/auth-server";
 import { createJob } from "@/lib/fiches/job";
+import { modeValide } from "@/lib/fiches/mode";
 import { PHOTO_TYPES, type PhotoType } from "@/lib/fiches/photoTypes";
 import { triggerStep } from "@/lib/fiches/trigger";
 
@@ -35,6 +36,7 @@ export async function POST(req: Request) {
       prix_achat: typeof b.prix_achat === "number" && Number.isFinite(b.prix_achat) ? b.prix_achat : null,
       notes: str(b.notes),
       ...typesOf(b.photos_types, Number(b.nb_photos ?? 0)),
+      mode: modeValide(b.mode),
     });
     const origin = new URL(req.url).origin;
     after(() => triggerStep(origin, { id, step: "texte" }));

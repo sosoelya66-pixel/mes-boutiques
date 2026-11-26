@@ -1,6 +1,7 @@
 // Génère (ou régénère) les photos portées d'une fiche existante, à partir de ses photos produit.
 import { after } from "next/server";
 import { userOk } from "@/lib/auth-server";
+import { modeValide } from "@/lib/fiches/mode";
 import { PHOTO_TYPES, type PhotoType } from "@/lib/fiches/photoTypes";
 import { triggerStep } from "@/lib/fiches/trigger";
 import { admin, getOwnerId } from "@/lib/supabase/admin";
@@ -11,7 +12,7 @@ export const maxDuration = 120;
 
 export async function POST(req: Request) {
   if (!(await userOk())) return Response.json({ error: "Non autorisé" }, { status: 401 });
-  const b = (await req.json().catch(() => ({}))) as { id?: string; nb?: number; types?: string[] };
+  const b = (await req.json().catch(() => ({}))) as { id?: string; nb?: number; types?: string[]; mode?: string };
   const valides = new Set<string>(PHOTO_TYPES.map((t) => t.value));
   const types = (b.types ?? []).filter((t) => valides.has(t)).slice(0, 4) as PhotoType[];
   const nb = types.length || Math.max(1, Math.min(4, Number(b.nb ?? 2)));
@@ -32,7 +33,7 @@ export async function POST(req: Request) {
   const produit = ((l.photos as string[]) ?? []).filter((u) => !dejaPortees.has(u)).slice(0, 3);
   if (!produit.length)
     return Response.json({ error: "Ajoute d'abord une capture d'écran du produit (Modifier → + Photos)." }, { status: 400 });
-  const params = { ...((g.params as Record<string, unknown>) ?? {}), shop_id: l.shop_id, produit, nb_photos: nb, photos_types: types.length ? types : undefined };
+  const params = { ...((g.params as Record<string, unknown>) ?? {}), shop_id: l.shop_id, produit, nb_photos: nb, photos_types: types.length ? types : undefined, mode: modeValide(b.mode) };
   await admin()
     .from("listings")
     .update({

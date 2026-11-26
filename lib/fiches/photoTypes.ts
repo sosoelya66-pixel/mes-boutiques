@@ -10,7 +10,8 @@ export const PHOTO_TYPES = [
 
 export type PhotoType = (typeof PHOTO_TYPES)[number]["value"];
 
-export const DEFAULT_SERIE: PhotoType[] = ["face", "sol", "trois_quarts"];
+// 2 photos par défaut (chaque photo générée coûte) ; on peut en ajouter jusqu'à 4
+export const DEFAULT_SERIE: PhotoType[] = ["face", "sol"];
 
 export const estPortee = (t: PhotoType) => PHOTO_TYPES.find((x) => x.value === t)?.porte ?? true;
 

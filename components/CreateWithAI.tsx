@@ -6,6 +6,7 @@ import { Modal, ModalTitle } from "@/components/ui/Modal";
 import { uploadPhoto } from "@/lib/data";
 import { styleComplet, stylePhotos } from "@/lib/types";
 import { PhotoTypesPicker } from "@/components/PhotoTypesPicker";
+import { ModePicker, useMode } from "@/components/ModePicker";
 import { DEFAULT_SERIE, estPortee, type PhotoType } from "@/lib/fiches/photoTypes";
 
 /* eslint-disable @next/next/no-img-element */
@@ -40,6 +41,7 @@ export function CreateWithAI({
   });
   const [produit, setProduit] = useState<string[]>(initial?.photo ? [initial.photo] : []);
   const [types, setTypes] = useState<PhotoType[]>(DEFAULT_SERIE);
+  const [mode, setMode] = useMode();
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +88,7 @@ export function CreateWithAI({
             .join(" "),
           // Sans avatar : seulement les photos sans personne (sol, cintre)
           photos_types: avecStyle(shop) ? types : types.filter((t) => !estPortee(t)),
+          mode,
         });
         premier ||= r.id;
       }
@@ -209,6 +212,10 @@ export function CreateWithAI({
             </div>
             <div className="mt-3">
               <PhotoTypesPicker value={types} onChange={setTypes} />
+            </div>
+            <div className="mt-4 border-t border-line pt-3">
+              <div className="mb-1.5 text-sm font-medium">Mode</div>
+              <ModePicker mode={mode} onChange={setMode} />
 
             </div>
           </div>

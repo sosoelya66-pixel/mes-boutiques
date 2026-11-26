@@ -12,16 +12,19 @@ function detect(b: Buffer): Prepared["media_type"] | null {
   return null;
 }
 
-export async function prepareImage(url: string): Promise<Prepared | null> {
+/** @param maxSide côté maximum (px) : les grandes images sont réduites (lecture moins chère) */
+export async function prepareImage(url: string, maxSide = 1024): Promise<Prepared | null> {
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(20000) });
     if (!res.ok) return null;
     let data: Buffer = Buffer.from(await res.arrayBuffer());
     let media_type = detect(data);
-    // Format non accepté, ou image trop lourde (> 4 Mo) : conversion en JPEG
-    if (!media_type || data.length > 4_000_000) {
-      const sharp = (await import("sharp")).default;
-      data = await sharp(data).rotate().resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true }).jpeg({ quality: 85 }).toBuffer();
+    // Format non accepté ou image plus grande que nécessaire : conversion en JPEG réduit
+    const sharp = (await import("sharp")).default;
+    const meta = await sharp(data).metadata().catch(() => null);
+    const tropGrande = !meta?.width || !meta?.height || Math.max(meta.width, meta.height) > maxSide;
+    if (!media_type || tropGrande || data.length > 4_000_000) {
+      data = await sharp(data).rotate().resize({ width: maxSide, height: maxSide, fit: "inside", withoutEnlargement: true }).jpeg({ quality: 85 }).toBuffer();
       media_type = "image/jpeg";
     }
     return { media_type, data };

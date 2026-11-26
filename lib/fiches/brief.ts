@@ -7,7 +7,7 @@ import { prepareImage, type Prepared } from "./images";
 import { REGLES_FR } from "./regles";
 
 let client: Anthropic | null = null;
-const MODEL = () => process.env.ANTHROPIC_MODEL || "claude-opus-5-5";
+const MODEL = (m?: string) => m || process.env.ANTHROPIC_MODEL || "claude-opus-5-5";
 
 const Brief = z.object({
   resume_fr: z.string().describe("Fiche technique visuelle en français, lisible par la vendeuse (5 à 8 lignes)"),
@@ -34,16 +34,16 @@ const imgBlock = (img: Prepared) => ({
 });
 
 async function produits(urls: string[]) {
-  return (await Promise.all(urls.slice(0, 3).map(prepareImage))).filter((x): x is Prepared => !!x);
+  return (await Promise.all(urls.slice(0, 3).map((u) => prepareImage(u, 768)))).filter((x): x is Prepared => !!x);
 }
 
 /** Avant la génération : fiche technique visuelle de l'article. */
-export async function briefArticle(productImages: string[], article: string | null): Promise<BriefData> {
+export async function briefArticle(productImages: string[], article: string | null, modele?: string): Promise<BriefData> {
   client ??= new Anthropic();
   const imgs = await produits(productImages);
   if (!imgs.length) throw new Error("Aucune capture du produit lisible pour le brief.");
   const r = await client.beta.messages.parse({
-    model: MODEL(),
+    model: MODEL(modele),
     max_tokens: 3000,
     output_config: { effort: "medium", format: betaZodOutputFormat(Brief) },
     messages: [
@@ -73,13 +73,14 @@ export async function verifierPhoto(
   photo: Prepared,
   brief: BriefData,
   /** Première photo validée de la série : l'article doit y être identique (couleur, détails) */
-  serie?: string | null
+  serie?: string | null,
+  modele?: string
 ): Promise<VerifData> {
   client ??= new Anthropic();
   const imgs = await produits(productImages);
-  const serieImg = serie ? await prepareImage(serie) : null;
+  const serieImg = serie ? await prepareImage(serie, 768) : null;
   const r = await client.beta.messages.parse({
-    model: MODEL(),
+    model: MODEL(modele),
     max_tokens: 2000,
     output_config: { effort: "medium", format: betaZodOutputFormat(Verif) },
     messages: [

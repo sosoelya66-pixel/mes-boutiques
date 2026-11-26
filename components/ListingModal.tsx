@@ -14,6 +14,7 @@ import { shortUrl } from "@/lib/links";
 import { photoPrompt } from "@/lib/prompt";
 import { PhotoTypesPicker } from "@/components/PhotoTypesPicker";
 import { SavePhotos } from "@/components/SavePhotos";
+import { ModePicker, useMode } from "@/components/ModePicker";
 import { DEFAULT_SERIE, type PhotoType } from "@/lib/fiches/photoTypes";
 import type { Listing, Sale } from "@/lib/types";
 
@@ -25,13 +26,14 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
   const avecAvatar = !!(shopById(listing.shop_id)?.avatar_url || shopById(listing.shop_id)?.style_avatar);
   const [typesGen, setTypesGen] = useState<PhotoType[]>(avecAvatar ? DEFAULT_SERIE : ["sol", "cintre"]);
   const [genBusy, setGenBusy] = useState(false);
+  const [modeGen, setModeGen] = useMode();
   async function genererPhotos() {
     setGenBusy(true);
     try {
       const res = await fetch("/api/fiches/jobs/photos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: listing.id, types: typesGen }),
+        body: JSON.stringify({ id: listing.id, types: typesGen, mode: modeGen }),
       });
       if (!res.ok) return alert((await res.json().catch(() => ({}))).error ?? "Erreur");
       await refresh();
@@ -205,6 +207,7 @@ export function ListingModal({ listing, onClose }: { listing: Listing; onClose: 
           ) : (
             <div className="mt-3 space-y-3">
               <PhotoTypesPicker value={typesGen} onChange={setTypesGen} porteePossible={!!(shop.avatar_url || shop.style_avatar)} />
+              <ModePicker mode={modeGen} onChange={setModeGen} />
               <button className="btn-primary !py-1.5" onClick={genererPhotos} disabled={genBusy || !typesGen.length}>
                 {genBusy ? "…" : `Générer ${typesGen.length} photo${typesGen.length > 1 ? "s" : ""}`}
               </button>

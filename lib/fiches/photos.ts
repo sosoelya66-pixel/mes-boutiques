@@ -52,6 +52,8 @@ export async function generateWornPhoto(input: {
   correction?: string | null;
   /** Type de photo choisi (portée de face, à plat au sol…) */
   type?: PhotoType | null;
+  /** Qualité d'image (selon le mode) */
+  qualite?: "low" | "medium" | "high";
 }): Promise<Buffer> {
   const type: PhotoType = input.type ?? ANCIEN_ORDRE[input.pose % ANCIEN_ORDRE.length];
   const porte = estPortee(type);
@@ -124,7 +126,7 @@ export async function generateWornPhoto(input: {
     // JPEG compressé : ~10 fois plus léger qu'un PNG, chargement rapide sur téléphone
     output_format: "jpeg",
     output_compression: 85,
-    quality: (process.env.OPENAI_IMAGE_QUALITY as "low" | "medium" | "high" | undefined) || "high",
+    quality: input.qualite || (process.env.OPENAI_IMAGE_QUALITY as "low" | "medium" | "high" | undefined) || "medium",
     // Haute fidélité aux images fournies (option prise en charge par gpt-image-1.5 uniquement)
     ...(model.startsWith("gpt-image-1.5") ? { input_fidelity: "high" as const } : {}),
   });

@@ -87,6 +87,8 @@ export async function generateFiche(input: {
   etat: string | null;
   prix_achat: number | null;
   notes: string | null;
+  /** Modèle Claude (selon le mode Éco / Équilibré / Max) */
+  modele?: string;
 }): Promise<FicheData> {
   client ??= new Anthropic();
   // Photos de l'utilisateur en priorité ; sinon l'image de la page fournisseur
@@ -108,7 +110,7 @@ export async function generateFiche(input: {
     .filter(Boolean)
     .join("\n");
 
-  const prepared = (await Promise.all(images.map(prepareImage))).filter((x): x is NonNullable<typeof x> => !!x);
+  const prepared = (await Promise.all(images.map((u) => prepareImage(u, 768)))).filter((x): x is NonNullable<typeof x> => !!x);
   const content: Anthropic.Beta.BetaContentBlockParam[] = [
     ...prepared.map((img) => ({
       type: "image" as const,
@@ -118,10 +120,10 @@ export async function generateFiche(input: {
   ];
 
   const response = await client.beta.messages.parse({
-    model: process.env.ANTHROPIC_MODEL || "claude-opus-5-5",
+    model: input.modele || process.env.ANTHROPIC_MODEL || "claude-opus-5-5",
     max_tokens: 4000,
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
+    // Le relais automatique en cas de refus n'existe que pour Opus / Sonnet
+    ...(/haiku/.test(input.modele ?? "") ? {} : { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }),
     system: SYSTEM,
     output_config: { effort: "low", format: betaZodOutputFormat(FicheData) },
     messages: [{ role: "user", content }],

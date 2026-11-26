@@ -8,6 +8,7 @@ import { htmlToText } from "@/lib/sync/run";
 import { humanError } from "./errors";
 import { generateFiche, readProductPage } from "./generate";
 import { briefArticle, verifierPhoto, type BriefData } from "./brief";
+import { modeValide, REGLAGES, type Mode } from "./mode";
 import type { PhotoType } from "./photoTypes";
 import { generateWornPhoto, saveWornPhoto } from "./photos";
 
@@ -22,6 +23,8 @@ export type JobParams = {
   nb_photos: number;
   /** Type choisi pour chaque photo (portée de face, à plat au sol…) */
   photos_types?: PhotoType[];
+  /** Mode de coût : eco (défaut), equilibre, max */
+  mode?: Mode;
 };
 
 type Gen = {
@@ -95,7 +98,17 @@ export async function runTextStep(id: string) {
     const { data: shop } = await admin().from("shops").select("taille").eq("id", p.shop_id).maybeSingle();
     taille = shop?.taille ?? null;
     const page = p.lien ? await readProductPage(p.lien, htmlToText) : null;
-    const f = await generateFiche({ lien: p.lien, page, photos: p.produit, taille, marque: p.marque, etat: p.etat, prix_achat: p.prix_achat, notes: p.notes });
+    const f = await generateFiche({
+      lien: p.lien,
+      page,
+      photos: p.produit,
+      taille,
+      marque: p.marque,
+      etat: p.etat,
+      prix_achat: p.prix_achat,
+      notes: p.notes,
+      modele: REGLAGES[modeValide(p.mode)].claude,
+    });
     // Photos du produit : celles fournies (captures), sinon l'image de la page si le site la laisse lire
     const ref = p.produit.length ? p.produit : page?.images.slice(0, 1) ?? [];
     const notes = [`💡 ${f.conseil}`, p.lien && !page ? "Page produit illisible : fiche rédigée d'après les photos." : ""].filter(Boolean).join("\n");
@@ -144,22 +157,33 @@ export async function runPhotoStep(id: string, i: number) {
     .join(" · ");
   let portees = g.portees;
   const erreurs = [...g.erreurs];
+  const reglage = REGLAGES[modeValide(p.mode)];
   let brief = g.brief;
   const controles = [...(g.controles ?? [])];
   try {
     // 1. Brief : une seule fois par série, à partir des captures
     if (!brief) {
-      brief = await briefArticle(g.ref_images, article).catch(() => undefined);
+      brief = await briefArticle(g.ref_images, article, reglage.claude).catch(() => undefined);
       if (brief) await save(id, { generation: { ...g, brief, etape: `Photo ${i + 1}/${p.nb_photos}` } });
     }
     // 2. Génération, puis vérification par Claude ; une nouvelle tentative corrigée si besoin
     let correction: string | null = null;
     let data: Buffer | null = null;
     let verdict = "";
-    for (let essai = 0; essai < 2; essai++) {
-      data = await generateWornPhoto({ shopId: p.shop_id, productImages: g.ref_images, pose: i, type: p.photos_types?.[i] ?? null, article, brief: brief?.brief_en, correction });
-      if (!brief) break;
-      const v = await verifierPhoto(g.ref_images, { media_type: "image/jpeg", data }, brief, portees[0] ?? null).catch(() => null);
+    for (let essai = 0; essai < reglage.essais; essai++) {
+      data = await generateWornPhoto({
+        shopId: p.shop_id,
+        productImages: g.ref_images,
+        pose: i,
+        type: p.photos_types?.[i] ?? null,
+        article,
+        brief: brief?.brief_en,
+        correction,
+        qualite: reglage.qualite,
+      });
+      // Mode Éco : pas de vérification (économie)
+      if (!brief || !reglage.verifier) break;
+      const v = await verifierPhoto(g.ref_images, { media_type: "image/jpeg", data }, brief, portees[0] ?? null, reglage.claude).catch(() => null);
       if (!v || v.conforme) {
         verdict = essai ? "✓ conforme après correction" : "✓ conforme";
         break;
@@ -168,7 +192,7 @@ export async function runPhotoStep(id: string, i: number) {
       correction = v.correction_en || v.ecarts.join("; ");
     }
     portees = [...portees, await saveWornPhoto(data!)];
-    controles.push(`Photo ${i + 1} : ${verdict || "non vérifiée"}`);
+    controles.push(`Photo ${i + 1} : ${verdict || (reglage.verifier ? "non vérifiée" : "non vérifiée (mode Éco)")}`);
   } catch (e) {
     erreurs.push(`Photo ${i + 1} : ${humanError(e, "OpenAI")}`);
   }
